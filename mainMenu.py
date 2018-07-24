@@ -4,6 +4,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
+import overseer
 
 
 class App(QApplication):
@@ -28,9 +29,7 @@ class MainWindow(QMainWindow):
         self.mainWidget = MainWidget()
         self.setCentralWidget(self.mainWidget)
 
-        self.resize(200, 200)
-
-
+        self.resize(200, 500)
 
 class MainWidget(QWidget):
     def __init__(self):
@@ -42,21 +41,50 @@ class MainWidget(QWidget):
 
         self.appFont = QFont("Arial", 14)
 
+
         #Button that opens quiz window for player to take
-        self.newPlayerPushButton = QPushButton("Create a new player")
+        self.newPlayerPushButton = QPushButton("Create a New Player")
         self.buttonLayout.addWidget(self.newPlayerPushButton)
 
         #Starts battle w/ characters that were entered
-        self.startPushbutton = QPushButton("Start battle!")
-        self.buttonLayout.addWidget(self.startPushbutton)
+        self.startPushButton = QPushButton("Start battle!")
+
+        self.viewPushButton = QPushButton("View All Players")
+        self.buttonLayout.addWidget(self.viewPushButton)
+        self.viewPushButton.clicked.connect(self.showView)
+
+        self.deletePushButton = QPushButton("Delete Player")
+        self.buttonLayout.addWidget(self.deletePushButton)
+        self.deletePushButton.clicked.connect(self.deletePlayer)
 
         self.mainLayout.addLayout(self.buttonLayout)
+        self.mainLayout.addStretch(0)
+        self.mainLayout.addWidget(self.startPushButton)
 
-        self.newPlayerPushButton.clicked.connect(self.showQuiz)
+        self.newPlayerPushButton.clicked.connect(self.showAttributes)
+        self.startPushButton.clicked.connect(self.startBattle)
 
-    def showQuiz(self):
-        self.quizDialog = QuizDialog()
-        self.quizDialog.show()
+    def showAttributes(self):
+        self.attributeDialog = AttributeDialog()
+        self.attributeDialog.show()
+
+    def showView(self):
+        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+
+        self.viewDialog = ViewDialog(self.searchResults)
+        self.viewDialog.show()
+
+    def deletePlayer(self):
+        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+
+        self.deleteDialog = DeleteDialog(self.searchResults)
+        self.deleteDialog.show()
+
+    def startBattle(self):
+        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+
+        self.startDialog = StartDialog(self.searchResults)
+        self.startDialog.show()
 
 class ResponseLabel(QLabel):
     def __init__(self, text, layout, row):
@@ -64,10 +92,8 @@ class ResponseLabel(QLabel):
         self.baseLayout=layout
         self.row=row
         self.column=0
-        #self.scrollArea = scroll
-        self.baseLayout.addWidget(self, self.row, self.column)
-        #self.scrollArea.setWidget(self)
 
+        self.baseLayout.addWidget(self, self.row, self.column)
 
 class QuestionLabel(QLabel):
     def __init__(self, text, layout, row):
@@ -91,6 +117,23 @@ class NumberComboBox(QComboBox):
         self.addItem("1", self.numberData)
         self.addItem("2", self.numberData)
         self.addItem("3", self.numberData)
+        self.addItem("4", self.numberData)
+        self.addItem("5", self.numberData)
+        self.addItem("6", self.numberData)
+        self.addItem("7", self.numberData)
+        self.addItem("8", self.numberData)
+        self.addItem("9", self.numberData)
+        self.addItem("10", self.numberData)
+        self.addItem("11", self.numberData)
+        self.addItem("12", self.numberData)
+        self.addItem("13", self.numberData)
+        self.addItem("14", self.numberData)
+        self.addItem("15", self.numberData)
+        self.addItem("16", self.numberData)
+        self.addItem("17", self.numberData)
+        self.addItem("18", self.numberData)
+        self.addItem("19", self.numberData)
+        self.addItem("20", self.numberData)
 
         self.row=row
         self.column=1
@@ -101,20 +144,157 @@ class NumberComboBox(QComboBox):
     def currentRating(self):
         return self.currentIndex()
 
-class QuizDialog(QDialog):
+class StartDialog(QDialog):
+    def __init__(self, results):
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+
+        self.startPushButton  = QPushButton("Start")
+        self.closePushButton = QPushButton("Close")
+
+        self.results = results
+
+        self.questionLabel = QLabel("Start Battle With Following Players?")
+        self.mainLayout.addWidget(self.questionLabel)
+
+        self.playerTable = QTableWidget()
+
+        self.playerTable.setColumnCount(5)
+        self.playerTable.setHorizontalHeaderLabels(["Name", "Strength", "Charisma", "Intelligence", "Dexterity"])
+
+        self.playerTable.setRowCount(len(self.results))
+
+        self.mainLayout.addWidget(self.playerTable)
+
+        colCount=0
+        rowCount=0
+
+        for row in self.results:
+            for col in row:
+                if col == row[0]:
+                    continue
+
+                self.cellWidget=QTableWidgetItem()
+                self.cellWidget.setText(str(col))
+                self.playerTable.setItem(rowCount, colCount, self.cellWidget)
+
+                colCount+=1
+
+                if colCount==5:
+                    colCount=0
+                    rowCount+=1
+
+
+        self.startPushButton.clicked.connect(overseer.BattleRoyale().startBattle)
+        self.closePushButton.clicked.connect(self.close)
+        self.mainLayout.addWidget(self.startPushButton, alignment=Qt.AlignCenter)
+        self.mainLayout.addWidget(self.closePushButton, alignment = Qt.AlignCenter)
+
+    def close(self):
+        self.accept()
+
+class DeleteDialog(QDialog):
+    def __init__(self, searchResults):
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+        self.selectionLayout = QVBoxLayout()
+
+        self.results = searchResults
+
+        self.genLabel=QLabel("Select Player(s) You Would Like to Delete\n")
+        self.mainLayout.addWidget(self.genLabel)
+
+        self.closePushButton=QPushButton("Close")
+
+        self.deletePushButton=QPushButton("Delete")
+
+        self.boxList=[]
+
+        for row in self.results:
+            checkBoxTxt=""
+            checkBoxTxt=str(row[0])+ " " + str(row[1])
+            self.checkBox=QCheckBox(checkBoxTxt)
+            self.boxList.append(self.checkBox)
+
+        for self.box in self.boxList:
+            self.selectionLayout.addWidget(self.box)
+
+        self.mainLayout.addLayout(self.selectionLayout)
+        self.mainLayout.addWidget(self.deletePushButton, alignment=Qt.AlignCenter)
+        self.mainLayout.addWidget(self.closePushButton, alignment=Qt.AlignCenter)
+
+        self.closePushButton.clicked.connect(self.closeMe)
+        self.deletePushButton.clicked.connect(self.deleteSelections)
+
+    def closeMe(self):
+        self.accept()
+
+    def deleteSelections(self):
+        title="Delete Player?"
+
+        for self.box in self.boxList:
+            if self.box.isChecked():
+                msg="Delete " +self.box.text()+"?"
+                reply=QMessageBox.question(self, title, msg)
+
+                if reply == QMessageBox.Yes:
+                    pid = int(self.box.text().split(" ")[0])
+                    overseer.BattleRoyale().deletePlayer(pid)
+        self.close()
+
+class ViewDialog(QDialog):
+    def __init__(self, searchResults):
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+        self.results = searchResults
+
+        self.resize(600, 500)
+
+        self.closePushButton = QPushButton("Close")
+
+        self.playerTable = QTableWidget()
+
+        self.playerTable.setColumnCount(5)
+        self.playerTable.setHorizontalHeaderLabels(["Name", "Strength", "Charisma", "Intelligence", "Dexterity"])
+
+        self.playerTable.setRowCount(len(self.results))
+
+        self.mainLayout.addWidget(self.playerTable)
+
+        colCount=0
+        rowCount=0
+
+        for row in self.results:
+            for col in row:
+                if col == row[0]:
+                    continue
+
+                self.cellWidget=QTableWidgetItem()
+                self.cellWidget.setText(str(col))
+                self.playerTable.setItem(rowCount, colCount, self.cellWidget)
+
+                colCount+=1
+
+                if colCount==5:
+                    colCount=0
+                    rowCount+=1
+
+
+        self.closePushButton.clicked.connect(self.close)
+        self.mainLayout.addWidget(self.closePushButton, alignment=Qt. AlignCenter)
+
+    def close(self):
+        self.accept()
+
+class AttributeDialog(QDialog):
     def __init__(self):
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
         self.mainLayout.setSpacing(25)
 
-        #Layout w/ scenarios
-        self.quizLayout = QGridLayout()
-        self.quizLayout.setVerticalSpacing(25)
-
-        #self.menuScrollArea = QScrollArea()
-        #self.menuScrollArea.setWidgetResizable(True)
-
-        #Default widget created -> scollAreaWidgetContents
+        #Layout w/ attributes
+        self.attLayout = QGridLayout()
+        self.attLayout.setVerticalSpacing(25)
 
         self.strengthCounter = 0;
         self.charismaCounter= 0;
@@ -125,77 +305,52 @@ class QuizDialog(QDialog):
 
         self.nameLineEdit = QLineEdit("Enter Name");
 
-        self.infoLabel = QLabel("For each scenario, respond with the most\nlikely way in which you would respond.\nDo this by numbering each response 0-3,\n0 being the most unlikely and 3\nbeing the most likely way\nin which you would respond.")
+        self.infoLabel = QLabel("Distribute your attribute points!\nYou are given 20 points to assign to four categories.\n")
         self.infoLabel.setFont(QFont("Arial", 14))
 
         self.mainLayout.addStretch()
 
 
         #######################
-        #Question1
+        #Strength
         ########################
-
-
-        #Creating scenario labels
-        self.qOneLabel = QuestionLabel("Question 1?", self.quizLayout, 0)
+        #Creating attribute labels
+        self.strengthLabel = QuestionLabel("Strength", self.attLayout, 0)
 
         #Creating Response labels and their combo boxes
-        self.r1Label = ResponseLabel("R1", self.quizLayout, 1)
-        self.numberComboBox1 = NumberComboBox(self.quizLayout, 1)
-
-
-
-        self.r2label = ResponseLabel("R2", self.quizLayout, 2)
-        self.numberComboBox2 = NumberComboBox(self.quizLayout, 2)
-
-
-        self.r3label = ResponseLabel("R3", self.quizLayout, 3)
-        self.numberComboBox3 = NumberComboBox(self.quizLayout, 3)
-
-
-        self.r4label = ResponseLabel("R4", self.quizLayout, 4)
-        self.numberComboBox4 = NumberComboBox(self.quizLayout, 4)
+        self.r1Label = ResponseLabel("Points", self.attLayout, 1)
+        self.numberComboBox1 = NumberComboBox(self.attLayout, 1)
 
 
         #######################
-        #Question2
+        #Charisma
         ########################
-        #Creating scenario labels
-        self.qTwoLabel = QuestionLabel("Question 2?", self.quizLayout, 5)
+        #Creating attribute labels
+        self.qTwoLabel = QuestionLabel("Charisma", self.attLayout, 5)
 
         #Creating Response labels and their combo boxes
-        self.r5Label = ResponseLabel("R1", self.quizLayout, 6)
-        self.numberComboBox5 = NumberComboBox(self.quizLayout, 6)
+        self.r2Label = ResponseLabel("Points", self.attLayout, 6)
+        self.numberComboBox2 = NumberComboBox(self.attLayout, 6)
 
-        self.r6label = ResponseLabel("R2", self.quizLayout, 8)
-        self.numberComboBox6 = NumberComboBox(self.quizLayout, 8)
-
-        self.r7label = ResponseLabel("R3", self.quizLayout, 10)
-        self.numberComboBox7 = NumberComboBox( self.quizLayout,10)
-
-        self.r8label = ResponseLabel("R4", self.quizLayout, 11)
-        self.numberComboBox8 = NumberComboBox(self.quizLayout, 11)
-
-        """
         #######################
-        #Question3
+        #Intelligence
         ########################
-        #Creating scenario labels
-        self.qTwoLabel = QuestionLabel("Question 3?", self.quizLayout, 12)
+        #Creating attribute labels
+        self.qThreeLabel = QuestionLabel("Intelligence", self.attLayout, 12)
 
         #Creating Response labels and their combo boxes
-        self.r5Label = ResponseLabel("R1", self.quizLayout, 13)
-        self.numberComboBox = NumberComboBox(self.numberData, self.quizLayout, 13)
+        self.r3Label = ResponseLabel("Points", self.attLayout, 13)
+        self.numberComboBox3 = NumberComboBox(self.attLayout, 13)
 
-        self.r6label = ResponseLabel("R2", self.quizLayout, 14)
-        self.numberComboBox = NumberComboBox(self.numberData, self.quizLayout, 14)
+        ####################
+        #Dexterity
+        ####################
+        #Creating attribute labels
+        self.qFourLabel = QuestionLabel("Dexterity", self.attLayout, 14)
 
-        self.r7label = ResponseLabel("R3", self.quizLayout, 15)
-        self.numberComboBox = NumberComboBox(self.numberData, self.quizLayout, 15)
-
-        self.r8label = ResponseLabel("R4", self.quizLayout, 16)
-        self.numberComboBox = NumberComboBox(self.numberData, self.quizLayout, 16)
-        """
+        #Creating Response labels and their combo boxes
+        self.r4Label = ResponseLabel("Points", self.attLayout, 15)
+        self.numberComboBox4 = NumberComboBox(self.attLayout, 15)
 
 
         self.closePushButton = QPushButton("Close")
@@ -208,9 +363,8 @@ class QuizDialog(QDialog):
 
         self.mainLayout.addWidget(self.infoLabel)
         self.mainLayout.addWidget(self.nameLineEdit)
-        self.mainLayout.addLayout(self.quizLayout)
+        self.mainLayout.addLayout(self.attLayout)
         self.mainLayout.addWidget(self.finishPushButton, alignment=Qt.AlignCenter)
-        self.mainLayout.addWidget(self.closePushButton, alignment=Qt.AlignCenter)
 
 
     def closeMe(self):
@@ -219,18 +373,29 @@ class QuizDialog(QDialog):
     def submitResponseAndWrite(self):
         self.name = self.nameLineEdit.text()
 
-        self.strengthCounter+=self.numberComboBox1.currentRating()+self.numberComboBox5.currentRating()
-        self.charismaCounter+=self.numberComboBox2.currentRating()+self.numberComboBox6.currentRating()
-        self.intelligenceCounter+=self.numberComboBox3.currentRating()+self.numberComboBox7.currentRating()
-        self.dexterityCounter+=self.numberComboBox4.currentRating()+self.numberComboBox8.currentRating()
+        self.strengthCounter+=self.numberComboBox1.currentRating()
+        self.charismaCounter+=self.numberComboBox2.currentRating()
+        self.intelligenceCounter+=self.numberComboBox3.currentRating()
+        self.dexterityCounter+=self.numberComboBox4.currentRating()
 
-        with open("playerInfo.txt", mode="a") as playerInfo:
-            playerInfo.write(self.name + ":" + str(self.strengthCounter) + ":" + str(self.charismaCounter) + ":" +  str(self.intelligenceCounter) + ":" + str(self.dexterityCounter) + "\n")
+        self.totalCounter=int(self.strengthCounter+self.charismaCounter+self.intelligenceCounter+self.dexterityCounter)
 
-        playerInfo.close()
+        #Checking that only 20 points were allocated among the four attribute categories
+        if self.totalCounter != 20:
+            msg = "Error: Total points do not equal 20. Please reallocate points.\n"
+            title = "Points not allocated correctly"
+            QMessageBox.information(self, title, msg)
 
+        #Adds player to the database by writing the information to a file that will then be read by the overseer
+        else:
+            msg = "Adding %s to player database...\n" % self.name
+            title = "Player added!"
+            QMessageBox.information(self, title, msg)
 
+            with open("playerInfo.txt", mode="a") as playerInfo:
+                playerInfo.write(self.name + ":" + str(self.strengthCounter) + ":" + str(self.charismaCounter) + ":" +  str(self.intelligenceCounter) + ":" + str(self.dexterityCounter) + "\n")
 
+            playerInfo.close()
 
 
 def main():
