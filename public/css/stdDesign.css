@@ -12,13 +12,13 @@ body {
 
 h1 {
   text-align: left;
-  margin-top: 200px;
+  margin-top: 50px;
   padding: 20px;
-  -webkit-animation: fadein 5s; /* Safari, Chrome and Opera > 12.1 */
-  -moz-animation: fadein 5s; /* Firefox < 16 */
-  -ms-animation: fadein 5s; /* Internet Explorer */
-  -o-animation: fadein 5s; /* Opera < 12.1 */
-  animation: fadein 5s;
+  -webkit-animation: fadein 3s; /* Safari, Chrome and Opera > 12.1 */
+  -moz-animation: fadein 3s; /* Firefox < 16 */
+  -ms-animation: fadein 3s; /* Internet Explorer */
+  -o-animation: fadein 3s; /* Opera < 12.1 */
+  animation: fadein 3s;
 
 }
 
@@ -76,12 +76,18 @@ h2 {
 
 #shield {
   height: 50%;
-  -webkit-animation: fadein 5s; /* Safari, Chrome and Opera > 12.1 */
-  -moz-animation: fadein 5s; /* Firefox < 16 */
-  -ms-animation: fadein 5s; /* Internet Explorer */
-  -o-animation: fadein 5s; /* Opera < 12.1 */
-  animation: fadein 5s;
+  -webkit-animation: fadein 3s; /* Safari, Chrome and Opera > 12.1 */
+  -moz-animation: fadein 3s; /* Firefox < 16 */
+  -ms-animation: fadein 3s; /* Internet Explorer */
+  -o-animation: fadein 3s; /* Opera < 12.1 */
+  animation: fadein 3s;
 
+}
+
+#winner {
+  text-align: center;
+  position: relative;
+  left: 335px;
 }
 
 .bracket{
@@ -100,6 +106,14 @@ table{
 #headers{
   background-color: #000080;
   color:white;
+}
+
+#roundHeaders {
+
+  background-color: #3399ff;
+  color:black;
+  position: relative;
+  left: 335px;
 }
 
 #tableContent{

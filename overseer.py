@@ -9,11 +9,10 @@ import sys
 import mainMenu
 import matchUps
 
+import webbrowser
+
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('/home/kiha6349/Dropbox/battleRoyale/templates'))
-
-
-
 
 class BattleRoyale(object):
     def __init__(self):
@@ -45,6 +44,9 @@ class BattleRoyale(object):
         self.db.close()
 
     def retrievePlayerInfo(self):
+        """
+        Gets all row from the player db
+        """
         self.cur.execute(self.retrieveAllStmt)
         self.playerSelect = self.cur.fetchall()
 
@@ -52,6 +54,9 @@ class BattleRoyale(object):
 
 
     def readPlayerInfo(self):
+        """
+        Reads the player information provided through the GUI and adds it to the database
+        """
         with open("playerInfo.txt", mode = "r") as playerInfo:
 
             for playerLine in playerInfo.readlines():
@@ -68,30 +73,41 @@ class BattleRoyale(object):
                     #Adding each player to database
                     data = (self.playerName, self.strength, self.charisma, self.intelligence, self.dexterity)
                     self.cur.execute(self.insertStmt, data)
+                    self.db.commit()
 
 
 
         playerInfo.close()
         open("playerInfo.txt", "w").close()
 
-    #def readRoundResults(self):
-        #Store round results and pass to html file
-
     def deletePlayer(self, pid):
+        """
+        Option to delete player from the database
+        """
         deleteStmt="DELETE FROM Player WHERE PersonalId = '%d'"
         self.cur.execute(deleteStmt % pid)
 
     def createMatch(self):
+        """
+        Creates a match object that lets the battle begin
+        """
         #Generates matchups using player database
-        print("here")
         match=matchUps.Match()
         playersRemaining = match.storePlayerInfo()
 
+        #Clears the results from the previous round
+        open("RoundResults.txt", "w").close()
 
+        #Clears the descriptions from the previous round
+        open("RoundDescriptions.txt", "w").close()
+
+        #Rounds proceed until there is a winner
         while playersRemaining != 1:
             playersRemaining = match.battleCycle()
+            #Writes both winners and the activities to their own files
             match.writeRoundResults()
 
+        #Writes the kill counts to file
         match.writeBattleResults()
 
     def startWebApp(self):
@@ -108,12 +124,61 @@ class BattleRoyale(object):
         cherrypy.quickstart(Results(), '/', conf)
         webbrowser.open("http://127.0.0.1:8080")
 
+def readRoundDesc():
+    """
+    Reads the round desc from file and adds to a list that can be interpreted by jinja
+    """
+    descList=[]
+    roundList=[]
 
+    with open("RoundDescriptions.txt", mode="r") as roundDesc:
+        for line in roundDesc.readlines():
+            if line == "\n":
+                descList.append(roundList)
+                roundList=[]
+                continue
 
+            line=line.strip()
 
+            roundList.append(line)
 
+        return roundList
+
+def readRoundResults():
+    """
+    Reads the overall results of the round and adds to a list that be interpreted by jinja
+    """
+    #Overall list that contains a list of rounds with each "round list" containing lists that include the killer and the victim
+    killedByList = []
+    #List to separate the results by round
+    roundList=[]
+
+    with open("RoundResults.txt", mode="r") as roundResults:
+        for line in roundResults.readlines():
+            #Signifies the end of a round
+            if line == "\n":
+                killedByList.append(roundList)
+                roundList=[]
+                continue
+
+            line=line.strip()
+            lineList = line.split(": ")
+
+            rowList = []
+            rowList.append(lineList[0])#killer
+            rowList.append(lineList[1])#victim
+
+            roundList.append(rowList)
+
+    winner = killedByList[-1][-1][0]
+
+    return killedByList, winner
 
 def readBattleResults():
+    """
+    Reads the kill count from the battle and return to be interpreted by jinja
+    """
+    #List of lists with each of the smaller lists containing a player and their kill count
     killsList=[]
 
     with open("Kills.txt", mode="r") as battleResults:
@@ -139,9 +204,11 @@ class Results(object):
 
     @cherrypy.expose
     def roundResults(self):
+        killedByList, winner = readRoundResults()
+
         template = env.get_template("roundResults.html")
 
-        return template.render()
+        return template.render(killedByResults = killedByList, winner=winner)
 
     @cherrypy.expose
     def battleResults(self):
@@ -151,7 +218,11 @@ class Results(object):
 
         return template.render(killResults =  killsList)
 
-
+    """
+    @cherrypy.expose
+    def roundDescriptions(self):
+        Create a page to display the activites that happened between rounds with a delay animation for each line
+    """
 
 
 def main():
@@ -166,8 +237,18 @@ def main():
     #Adds player info to db
     battleRoyale.readPlayerInfo()
 
-
-
+    #Open web page
+    conf = {
+        '/': {
+            'tools.sessions.on': True,
+            'tools.staticdir.root': os.path.abspath(os.getcwd())
+        },
+        '/static': {
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': './public'
+        }
+    }
+    cherrypy.quickstart(Results(), '/', conf)
 
 if(__name__ == "__main__"):
     main()

@@ -26,6 +26,7 @@ class Match(object):
         #Tracks number of kills by each player
         self.playerKillsDict={}
 
+        #Contains items that can be acquired (key) and what attribute it enchances (strength)
         self.itemsDict={}
 
         #Items that players can pick up
@@ -128,6 +129,9 @@ class Match(object):
         #Documents who kills who
         self.killedByDict = {}
 
+        #Keeps track of activities that happened during the round
+        self.roundDesc = []
+
         #Matrix represented by a 2D List (10 x 10)
         self.map = numpy.full((11,11), " ", dtype=object)
 
@@ -186,7 +190,9 @@ class Match(object):
         if self.scenario in self.strengthScenarios:
             #Comparing category attribute points
             if pair[0][2] > pair[1][2]:
-                print("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 #Increases loser's hits taken
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
@@ -207,7 +213,9 @@ class Match(object):
                 self.scenarioGenerator(pair)
 
             else:
-                print("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
 
@@ -227,7 +235,9 @@ class Match(object):
         ##############
         elif self.scenario in self.dexterityScenarios:
             if pair[0][5] > pair[1][5]:
-                print("%s %s %s" %(pair[1][1],  self.scenario, pair[0][1]))
+                statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
 
@@ -243,11 +253,14 @@ class Match(object):
                     self.scenarioGenerator(pair)
 
             elif pair[0][5] == pair[1][5]:
-                print("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                print(statement)
                 self.scenarioGenerator(pair)
 
             else:
-                print("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
 
@@ -267,7 +280,9 @@ class Match(object):
         ##############
         elif self.scenario in self.intelligenceScenarios:
             if pair[0][4] > pair[1][4]:
-                print("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
 
@@ -283,11 +298,14 @@ class Match(object):
                     self.scenarioGenerator(pair)
 
             elif pair[0][4] == pair[1][4]:
-                print("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                print(statement)
                 self.scenarioGenerator(pair)
 
             else:
-                print("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
 
@@ -307,7 +325,9 @@ class Match(object):
         ##############
         elif self.scenario in self.charismaScenarios:
             if pair[0][3] > pair[1][3]:
-                print("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
                 if self.isDead(pair[1][1]):
@@ -322,11 +342,14 @@ class Match(object):
                     self.scenarioGenerator(pair)
 
             elif pair[0][3] == pair[1][3]:
-                print("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                print(statement)
                 self.scenarioGenerator(pair)
 
             else:
-                print("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
+                print(statement)
+                self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
                 if self.isDead(pair[0][1]):
@@ -341,6 +364,11 @@ class Match(object):
                     self.scenarioGenerator(pair)
 
     def isDead(self, player):
+        """
+        Checks if player has taken 3 hits
+
+        Input: player <str>
+        """
         if self.hitsTakenDict[player] == 3:
             print("%s has been killed\n" % player)
             return True;
@@ -389,7 +417,7 @@ class Match(object):
     #Creates battle pairings
     def generateMatchUps(self):
         """
-        Randomly assign each player to another player for the initital matchup. Uses a random number generator
+        Randomly assigns each player to another player for the initital matchup. Uses a random number generator
         """
         self.assignNumsDict = {}
         self.allPairings = []
@@ -441,11 +469,20 @@ class Match(object):
 
     def writeRoundResults(self):
         """
-        Writes results of each round to file that is immediately sent to the webpage of viewing
+        Writes results of each round to file that is immediately sent to the webpage for viewing
         """
-        with open("RoundResults.txt", mode="w") as roundResults:
+        with open("RoundResults.txt", mode="a") as roundResults:
             for killed, killer in self.killedByDict.items():
-                roundResults.write(killer + " killed " + killed + "\n")
+                roundResults.write(killer + ": " + killed + "\n")
+
+            roundResults.write("\n")
+
+        with open("RoundDescriptions.txt", mode="a") as roundDesc:
+            for statement in self.roundDesc:
+                roundDesc.write(statement + "\n")
+
+            roundDesc.write("\n")
+
 
     def writeBattleResults(self):
         """

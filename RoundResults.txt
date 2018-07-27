@@ -1,1 +1,18 @@
-Jerry killed Natasha
+Jerry: Fred
+Harold: Sara
+Eric: Leslie
+Allen: Dan
+Jake: Natasha
+Evan: Hannah
+Greg: Max
+
+Eric: Jake
+Oliver: Greg
+Evan: Jerry
+Allen: Harold
+
+Allen: Evan
+Oliver: Eric
+
+Allen: Oliver
+

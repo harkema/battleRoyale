@@ -58,10 +58,17 @@ class MainWidget(QWidget):
         self.buttonLayout.addWidget(self.deletePushButton)
         self.deletePushButton.clicked.connect(self.deletePlayer)
 
-        self.viewResultsPushButton = QPushButton("View Results")
-        self.buttonLayout.addWidget(self.viewResultsPushButton)
-        self.viewResultsPushButton.clicked.connect(self.openWebBrowser)
-        self.viewResultsPushButton.setEnabled(False)
+        self.prepareResultsPushButton = QPushButton("Prepare Results")
+        self.buttonLayout.addWidget(self.prepareResultsPushButton)
+        self.prepareResultsPushButton.clicked.connect(self.prepWeb)
+        self.prepareResultsPushButton.clicked.connect(self.changeText)
+        self.prepareResultsPushButton.setEnabled(False)
+
+        self.openResultsPushButton = QPushButton("Open Results")
+        self.buttonLayout.addWidget(self.openResultsPushButton)
+
+
+        #self.openResultsPushButton.clicked.connect(self.openWebBrowser)
 
 
 
@@ -76,15 +83,20 @@ class MainWidget(QWidget):
 
         self.newPlayerPushButton.clicked.connect(self.showAttributes)
         self.startPushButton.clicked.connect(self.startBattle)
-        self.startPushButton.clicked.connect(self.enableView)
+        self.startPushButton.clicked.connect(self.enablePrep)
 
 
+    def changeText(self):
+        self.prepareResultsPushButton.setText("Open Results")
 
-    def enableView(self):
-        self.viewResultsPushButton.setEnabled(True)
+    def enablePrep(self):
+        self.prepareResultsPushButton.setEnabled(True)
+
+    def prepWeb(self):
+        overseer.BattleRoyale().startWebApp()
 
     def openWebBrowser(self):
-        overseer.BattleRoyale().startWebApp()
+        webbrowser.open("http://127.0.0.1:8080")
 
     def showAttributes(self):
         self.attributeDialog = AttributeDialog()
@@ -210,7 +222,6 @@ class StartDialog(QDialog):
 
 
         self.startPushButton.clicked.connect(self.start)
-        self.startPushButton.clicked.connect(self.close)
         self.closePushButton.clicked.connect(self.close)
         self.mainLayout.addWidget(self.startPushButton, alignment=Qt.AlignCenter)
         self.mainLayout.addWidget(self.closePushButton, alignment = Qt.AlignCenter)
@@ -220,6 +231,8 @@ class StartDialog(QDialog):
 
     def start(self):
         overseer.BattleRoyale().createMatch()
+        self.accept()
+
 
 class DeleteDialog(QDialog):
     def __init__(self, searchResults):

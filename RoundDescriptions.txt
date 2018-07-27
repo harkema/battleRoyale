@@ -1,0 +1,45 @@
+Leslie  slept through a surprise attack from  Eric
+Eric  failed to dodge a rock thrown by   Leslie
+Eric  failed to dodge a rock thrown by   Leslie
+Leslie  was set on fire by  Eric
+Natasha  was pushed down a mountain by  Jake
+Natasha  was punched in the nose by  Jake
+Natasha  was hit with a stick by   Jake
+Greg  failed to dodge a rock thrown by   Max
+Max  strangled by  Greg
+Max  was hit with a stick by   Greg
+Sara  was stabbed in the back (literally and metaphorically) by  Harold
+Sara  was punched in the nose by  Harold
+Dan  was attacked by a wolf who was befriended by  Allen
+Dan  was pushed down a mountain by  Allen
+Fred  ate toxic berries left by  Jerry
+Fred  was set on fire by  Jerry
+Evan  slept through a surprise attack from  Hannah
+Evan  ate toxic berries left by  Hannah
+Hannah  failed to dodge a rock thrown by   Evan
+Hannah  fell into a river while following  Evan
+
+Jake  slept through a surprise attack from  Eric
+Eric  strangled by  Jake
+Jake  ate toxic berries left by  Eric
+Harold  was beaten up by a new gang led by  Allen
+Harold  was set on fire by  Allen
+Evan  ate toxic berries left by  Jerry
+Evan  was set on fire by  Jerry
+Jerry  fell out of a tree after the branch was broken by   Evan
+Jerry  failed to dodge a rock thrown by   Evan
+Greg  fell out of a tree after the branch was broken by   Oliver
+Oliver  was attacked by a wolf who was befriended by  Greg
+Greg  fell into a river while following  Oliver
+
+Evan  was set on fire by  Allen
+Evan  was stabbed in the back (literally and metaphorically) by  Allen
+Evan  was beaten up by a new gang led by  Allen
+Eric  was hit with a stick by   Oliver
+Oliver  ate toxic berries left by  Eric
+Eric  was pushed down a mountain by  Oliver
+
+Oliver  was beaten up by a new gang led by  Allen
+Oliver  strangled by  Allen
+Oliver  was attacked by a wolf who was befriended by  Allen
+
