@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Battle</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<<link href="/static/css/stdDesign.css" rel="stylesheet">
+</head>
+
+<body>
+  <script>
+
+
+    function repeatBracket(amount)
+    {
+
+      var area = document.getElementById("content");
+
+      for(var i=0; i<amount; i++)
+      {
+        area.innerHTML += "<img src=/static/images/bracket.png alt=bracket id=bracket> <style> img {position: relative; left: -100px;  } </style>"
+      }
+
+    }
+
+  </script>
+
+
+
+  <div class = "content" id="content">
+
+    <canvas id="bracketCanvas"> </canvas>
+
+    <script> repeatBracket(3); </script>
+
+  </div>
+
+
+  <div class="sideNav">
+    <a href="http://127.0.0.1:8080/index">Home</a>
+    <a href="http://127.0.0.1:8080/roundResults">Rounds Results</a>
+    <a href="http://127.0.0.1:8080/scoreboard">Kill Counts</a>
+  </div>
+
+
+
+</body>
+</html>

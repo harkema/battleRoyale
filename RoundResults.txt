@@ -1,12 +1,1 @@
-Sara killed Dan
-Dan killed Sara
-Isabelle killed Max
-Max killed Isabelle
-Natasha killed Greg
-Hannah killed Liza
-Julia killed Leslie
-Jake killed Eric
-Leslie killed Julia
-Greg killed Natasha
-Liza killed Hannah
-Eric killed Jake
+Jerry killed Natasha

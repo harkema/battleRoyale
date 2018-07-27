@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 import overseer
+import webbrowser
 
 
 class App(QApplication):
@@ -57,12 +58,33 @@ class MainWidget(QWidget):
         self.buttonLayout.addWidget(self.deletePushButton)
         self.deletePushButton.clicked.connect(self.deletePlayer)
 
+        self.viewResultsPushButton = QPushButton("View Results")
+        self.buttonLayout.addWidget(self.viewResultsPushButton)
+        self.viewResultsPushButton.clicked.connect(self.openWebBrowser)
+        self.viewResultsPushButton.setEnabled(False)
+
+
+
+        self.shieldLabel = QLabel()
+        self.shieldPixmap = QPixmap("/home/kiha6349/Dropbox/battleRoyale/public/images/shield.png")
+        self.shieldLabel.setPixmap(self.shieldPixmap)
+
         self.mainLayout.addLayout(self.buttonLayout)
         self.mainLayout.addStretch(0)
+        self.mainLayout.addWidget(self.shieldLabel)
         self.mainLayout.addWidget(self.startPushButton)
 
         self.newPlayerPushButton.clicked.connect(self.showAttributes)
         self.startPushButton.clicked.connect(self.startBattle)
+        self.startPushButton.clicked.connect(self.enableView)
+
+
+
+    def enableView(self):
+        self.viewResultsPushButton.setEnabled(True)
+
+    def openWebBrowser(self):
+        overseer.BattleRoyale().startWebApp()
 
     def showAttributes(self):
         self.attributeDialog = AttributeDialog()
@@ -80,11 +102,13 @@ class MainWidget(QWidget):
         self.deleteDialog = DeleteDialog(self.searchResults)
         self.deleteDialog.show()
 
+
     def startBattle(self):
         self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
 
         self.startDialog = StartDialog(self.searchResults)
         self.startDialog.show()
+
 
 class ResponseLabel(QLabel):
     def __init__(self, text, layout, row):
@@ -185,13 +209,17 @@ class StartDialog(QDialog):
                     rowCount+=1
 
 
-        self.startPushButton.clicked.connect(overseer.BattleRoyale().startBattle)
+        self.startPushButton.clicked.connect(self.start)
+        self.startPushButton.clicked.connect(self.close)
         self.closePushButton.clicked.connect(self.close)
         self.mainLayout.addWidget(self.startPushButton, alignment=Qt.AlignCenter)
         self.mainLayout.addWidget(self.closePushButton, alignment = Qt.AlignCenter)
 
     def close(self):
         self.accept()
+
+    def start(self):
+        overseer.BattleRoyale().createMatch()
 
 class DeleteDialog(QDialog):
     def __init__(self, searchResults):
@@ -365,6 +393,7 @@ class AttributeDialog(QDialog):
         self.mainLayout.addWidget(self.nameLineEdit)
         self.mainLayout.addLayout(self.attLayout)
         self.mainLayout.addWidget(self.finishPushButton, alignment=Qt.AlignCenter)
+        self.mainLayout.addWidget(self.closePushButton, alignment=Qt.AlignCenter)
 
 
     def closeMe(self):
@@ -396,6 +425,8 @@ class AttributeDialog(QDialog):
                 playerInfo.write(self.name + ":" + str(self.strengthCounter) + ":" + str(self.charismaCounter) + ":" +  str(self.intelligenceCounter) + ":" + str(self.dexterityCounter) + "\n")
 
             playerInfo.close()
+
+
 
 
 def main():

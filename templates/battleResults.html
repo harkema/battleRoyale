@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Battle</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="/static/css/stdDesign.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="content">
+  <table>
+    <h2> Scoreboard </h2>
+    <tr id = "headers">
+      <th> Name </th>
+      <th> Kills </th>
+    </tr>
+    {% for row in killResults %}
+    <tbody class = "tableBody">
+      <tr id = "tableContent">
+        <td> {{row[0]}} </td>
+        <td> {{row[1]}} </td>
+      </tr>
+    </tbody>
+    {% endfor %}
+  </table>
+</div>
+
+
+<div class="sideNav">
+  <a href="http://127.0.0.1:8080/index">Home</a>
+  <a href="http://127.0.0.1:8080/roundResults">Rounds Results</a>
+  <a href="http://127.0.0.1:8080/battleResults">Kill Counts</a>
+</div>
+
+
+
+</body>
+</html>

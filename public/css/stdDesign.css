@@ -1,0 +1,138 @@
+* {
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  background-color: #3399ff;
+}
+
+h1 {
+  text-align: left;
+  margin-top: 200px;
+  padding: 20px;
+  -webkit-animation: fadein 5s; /* Safari, Chrome and Opera > 12.1 */
+  -moz-animation: fadein 5s; /* Firefox < 16 */
+  -ms-animation: fadein 5s; /* Internet Explorer */
+  -o-animation: fadein 5s; /* Opera < 12.1 */
+  animation: fadein 5s;
+
+}
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Firefox < 16 */
+@-moz-keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Safari, Chrome and Opera > 12.1 */
+@-webkit-keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Internet Explorer */
+@-ms-keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Opera < 12.1 */
+@-o-keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+h2 {
+  text-align:center;
+  margin-top: 40px;
+}
+
+/* Style the top navigation bar */
+.topnav {
+    overflow: hidden;
+    background-color: #333;
+    width: 100%;
+}
+
+.content
+{
+  font-size: 25px;
+  padding-left: 100px;
+  color: white;
+  background-color: #3399ff;
+  position: relative;
+  top: -40px;
+  text-align: center;
+}
+
+#shield {
+  height: 50%;
+  -webkit-animation: fadein 5s; /* Safari, Chrome and Opera > 12.1 */
+  -moz-animation: fadein 5s; /* Firefox < 16 */
+  -ms-animation: fadein 5s; /* Internet Explorer */
+  -o-animation: fadein 5s; /* Opera < 12.1 */
+  animation: fadein 5s;
+
+}
+
+.bracket{
+  background-color: #3399ff;
+  margin-left:100px;
+
+}
+
+table{
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align:center;
+}
+
+#headers{
+  background-color: #000080;
+  color:white;
+}
+
+#tableContent{
+  background-color:#4d4dff;
+  color: white;
+}
+
+.sideNav {
+  height: 100%;
+  width: 100px;
+  float:left;
+  position: fixed;
+  z-index:1;
+  top: 0;
+  left: 0;
+  background-color:#a6a6a6;
+  overflow: hidden;
+
+}
+
+
+.sideNav a {
+  padding: 6px 8px 6px 8px;
+  text-decoration: none;
+  color: white;
+  display: block;
+  text-align:center;
+  margin-right: auto;
+  margin-left: auto;
+  margin-top: 30px;
+}
+
+.sideNav a:hover {
+  background-color: #ddd;
+  color: black;
+}
