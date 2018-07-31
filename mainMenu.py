@@ -9,17 +9,18 @@ import webbrowser
 
 
 class App(QApplication):
-    def __init__(self):
+    def __init__(self, db, battleRoyale):
         """
         Main application
         """
         QApplication.__init__(self, sys.argv)
+        self.db = db
         self.setApplicationName("Battle Royale")
-        self.mainWindow = MainWindow()
+        self.mainWindow = MainWindow(self.db, battleRoyale)
         self.mainWindow.show()
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, db, battleRoyale):
         """
         Main Window w/ option to enter a new player and start the battle"
         """
@@ -27,13 +28,18 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self)
         self.setWindowTitle("Main Menu")
 
-        self.mainWidget = MainWidget()
+        self.db = db
+
+        self.mainWidget = MainWidget(self.db, battleRoyale)
         self.setCentralWidget(self.mainWidget)
 
         self.resize(200, 500)
 
 class MainWidget(QWidget):
-    def __init__(self):
+    def __init__(self, db, battleRoyale):
+        """
+        Lets user manipulate player database and start the battle
+        """
         QWidget.__init__(self)
 
         self.mainLayout = QVBoxLayout(self)
@@ -41,6 +47,14 @@ class MainWidget(QWidget):
         self.buttonLayout = QVBoxLayout()
 
         self.appFont = QFont("Arial", 14)
+
+        self.db = db
+
+        self.battleRoyale = battleRoyale
+
+        #Welcome label
+        self.welcomeLabel = QLabel("Welcome to the Battle Royale!")
+        self.welcomeLabel.setFont(QFont("Arial", 20))
 
 
         #Button that opens quiz window for player to take
@@ -50,80 +64,107 @@ class MainWidget(QWidget):
         #Starts battle w/ characters that were entered
         self.startPushButton = QPushButton("Start battle!")
 
+        #Shows table of all players currently in db
         self.viewPushButton = QPushButton("View All Players")
         self.buttonLayout.addWidget(self.viewPushButton)
         self.viewPushButton.clicked.connect(self.showView)
 
+        #Show all players that can be deleted and delete
         self.deletePushButton = QPushButton("Delete Player")
         self.buttonLayout.addWidget(self.deletePushButton)
         self.deletePushButton.clicked.connect(self.deletePlayer)
 
-        self.prepareResultsPushButton = QPushButton("Prepare Results")
-        self.buttonLayout.addWidget(self.prepareResultsPushButton)
-        self.prepareResultsPushButton.clicked.connect(self.prepWeb)
-        self.prepareResultsPushButton.clicked.connect(self.changeText)
-        self.prepareResultsPushButton.setEnabled(False)
-
-        self.openResultsPushButton = QPushButton("Open Results")
+        #Opens webpage
+        self.openResultsPushButton = QPushButton("View Results")
         self.buttonLayout.addWidget(self.openResultsPushButton)
+        self.openResultsPushButton.clicked.connect(self.openWebBrowser)
 
+        #Creating menu bar
+        self.menuBar = QMenuBar()
 
-        #self.openResultsPushButton.clicked.connect(self.openWebBrowser)
+        #Creating player menu
+        self.playerMenu=QMenu("Player")
+        self.menuBar.addMenu(self.playerMenu)
 
+        #Create new player option
+        self.newPlayerAction = QAction("New...", self.playerMenu)
+        self.playerMenu.addAction(self.newPlayerAction)
+        self.newPlayerAction.triggered.connect(self.showAttributes)
 
+        #Delete player option
+        self.deletePlayerAction = QAction("Delete...", self.playerMenu)
+        self.playerMenu.addAction(self.deletePlayerAction)
+        self.deletePlayerAction.triggered.connect(self.deletePlayer)
+
+        #View all players option
+        self.viewPlayersAction = QAction("View...", self.playerMenu)
+        self.playerMenu.addAction(self.viewPlayersAction)
+        self.viewPlayersAction.triggered.connect(self.showView)
 
         self.shieldLabel = QLabel()
         self.shieldPixmap = QPixmap("/home/kiha6349/Dropbox/battleRoyale/public/images/shield.png")
         self.shieldLabel.setPixmap(self.shieldPixmap)
 
+
+        self.mainLayout.addWidget(self.menuBar)
+        self.mainLayout.addWidget(self.welcomeLabel, alignment=Qt.AlignCenter)
+        self.mainLayout.addStretch(1)
         self.mainLayout.addLayout(self.buttonLayout)
-        self.mainLayout.addStretch(0)
+        self.mainLayout.addStretch(1)
         self.mainLayout.addWidget(self.shieldLabel)
         self.mainLayout.addWidget(self.startPushButton)
 
         self.newPlayerPushButton.clicked.connect(self.showAttributes)
         self.startPushButton.clicked.connect(self.startBattle)
-        self.startPushButton.clicked.connect(self.enablePrep)
 
-
-    def changeText(self):
-        self.prepareResultsPushButton.setText("Open Results")
-
-    def enablePrep(self):
-        self.prepareResultsPushButton.setEnabled(True)
-
-    def prepWeb(self):
-        overseer.BattleRoyale().startWebApp()
 
     def openWebBrowser(self):
+        """
+        Opens results of each round and the battle in a webpage
+        """
         webbrowser.open("http://127.0.0.1:8080")
 
     def showAttributes(self):
-        self.attributeDialog = AttributeDialog()
+        """
+        Opens dialog window that lets user select attributes for their player
+        """
+        self.attributeDialog = AttributeDialog(self.db)
         self.attributeDialog.show()
 
     def showView(self):
-        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+        """
+        Opens dialog window that displays all players in the database
+        """
+        self.searchResults = self.db.retrievePlayerInfo()
 
         self.viewDialog = ViewDialog(self.searchResults)
         self.viewDialog.show()
 
     def deletePlayer(self):
-        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+        """
+        Opens dialog window that lets user select player(s) to delete
+        """
+        self.searchResults = self.db.retrievePlayerInfo()
 
-        self.deleteDialog = DeleteDialog(self.searchResults)
+        self.deleteDialog = DeleteDialog(self.searchResults, self.db)
         self.deleteDialog.show()
 
 
     def startBattle(self):
-        self.searchResults = overseer.BattleRoyale().retrievePlayerInfo()
+        """
+        Opens dialog window that lets user view players before starting battle
+        """
+        self.searchResults = self.db.retrievePlayerInfo()
 
-        self.startDialog = StartDialog(self.searchResults)
+        self.startDialog = StartDialog(self.searchResults, self.db, self.battleRoyale)
         self.startDialog.show()
 
 
 class ResponseLabel(QLabel):
     def __init__(self, text, layout, row):
+        """
+        Custom class for labels that go w/ attribute combo box
+        """
         QLabel.__init__(self, text)
         self.baseLayout=layout
         self.row=row
@@ -133,6 +174,9 @@ class ResponseLabel(QLabel):
 
 class QuestionLabel(QLabel):
     def __init__(self, text, layout, row):
+        """
+        Custom class for labeled descriptions
+        """
         QLabel.__init__(self, text)
         self.setFont(QFont("Arial", 14))
         self.baseLayout=layout
@@ -144,6 +188,9 @@ class QuestionLabel(QLabel):
 
 class NumberComboBox(QComboBox):
     def __init__(self, layout, row,):
+        """
+        Custom class for combo boxes used to select attributes
+        """
         QComboBox.__init__(self)
 
         self.baseLayout = layout
@@ -173,26 +220,36 @@ class NumberComboBox(QComboBox):
 
         self.row=row
         self.column=1
-        #self.scrollArea = scroll
+
         self.baseLayout.addWidget(self, self.row, 1)
-        #self.scrollArea.setWidget(self)
+
 
     def currentRating(self):
         return self.currentIndex()
 
 class StartDialog(QDialog):
-    def __init__(self, results):
+    def __init__(self, results, db, battleRoyale):
+        """
+        Dialog box that shows user players before being able to start battle
+        """
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
 
         self.startPushButton  = QPushButton("Start")
         self.closePushButton = QPushButton("Close")
 
+        #Player information retrieved from db
         self.results = results
 
+        self.db = db
+
+        self.battleRoyale = battleRoyale
+
+        #Creating Label
         self.questionLabel = QLabel("Start Battle With Following Players?")
         self.mainLayout.addWidget(self.questionLabel)
 
+        #Creating table with player information displayed
         self.playerTable = QTableWidget()
 
         self.playerTable.setColumnCount(5)
@@ -205,6 +262,7 @@ class StartDialog(QDialog):
         colCount=0
         rowCount=0
 
+        #Filling table
         for row in self.results:
             for col in row:
                 if col == row[0]:
@@ -216,7 +274,7 @@ class StartDialog(QDialog):
 
                 colCount+=1
 
-                if colCount==5:
+                if colCount==6:
                     colCount=0
                     rowCount+=1
 
@@ -230,17 +288,26 @@ class StartDialog(QDialog):
         self.accept()
 
     def start(self):
-        overseer.BattleRoyale().createMatch()
+        """
+        Starts match
+        """
+        self.battleRoyale.createMatch()
         self.accept()
 
 
 class DeleteDialog(QDialog):
-    def __init__(self, searchResults):
+
+    def __init__(self, searchResults, db):
+        """
+        Dialog window for user to select players to delete
+        """
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
         self.selectionLayout = QVBoxLayout()
 
         self.results = searchResults
+
+        self.db = db
 
         self.genLabel=QLabel("Select Player(s) You Would Like to Delete\n")
         self.mainLayout.addWidget(self.genLabel)
@@ -251,6 +318,7 @@ class DeleteDialog(QDialog):
 
         self.boxList=[]
 
+        #Creating message box
         for row in self.results:
             checkBoxTxt=""
             checkBoxTxt=str(row[0])+ " " + str(row[1])
@@ -271,20 +339,26 @@ class DeleteDialog(QDialog):
         self.accept()
 
     def deleteSelections(self):
+        """
+        Message Box that allows user to delete the player
+        """
         title="Delete Player?"
 
         for self.box in self.boxList:
             if self.box.isChecked():
-                msg="Delete " +self.box.text()+"?"
+                msg="Delete " + self.box.text() +"?"
                 reply=QMessageBox.question(self, title, msg)
 
                 if reply == QMessageBox.Yes:
                     pid = int(self.box.text().split(" ")[0])
-                    overseer.BattleRoyale().deletePlayer(pid)
+                    self.db.deletePlayer(pid)
         self.close()
 
 class ViewDialog(QDialog):
     def __init__(self, searchResults):
+        """
+        Dialog window containing table that shows all players currently in the database
+        """
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
         self.results = searchResults
@@ -305,6 +379,7 @@ class ViewDialog(QDialog):
         colCount=0
         rowCount=0
 
+        #Creating table
         for row in self.results:
             for col in row:
                 if col == row[0]:
@@ -316,7 +391,7 @@ class ViewDialog(QDialog):
 
                 colCount+=1
 
-                if colCount==5:
+                if colCount==6:
                     colCount=0
                     rowCount+=1
 
@@ -328,10 +403,15 @@ class ViewDialog(QDialog):
         self.accept()
 
 class AttributeDialog(QDialog):
-    def __init__(self):
+    def __init__(self, db):
+        """
+        Dialog box that allows user to select attributes for player
+        """
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
         self.mainLayout.setSpacing(25)
+
+        self.db  = db
 
         #Layout w/ attributes
         self.attLayout = QGridLayout()
@@ -413,6 +493,9 @@ class AttributeDialog(QDialog):
         self.accept()
 
     def submitResponseAndWrite(self):
+        """
+        Uses attributes to enter new player into the database
+        """
         self.name = self.nameLineEdit.text()
 
         self.strengthCounter+=self.numberComboBox1.currentRating()
@@ -434,10 +517,8 @@ class AttributeDialog(QDialog):
             title = "Player added!"
             QMessageBox.information(self, title, msg)
 
-            with open("playerInfo.txt", mode="a") as playerInfo:
-                playerInfo.write(self.name + ":" + str(self.strengthCounter) + ":" + str(self.charismaCounter) + ":" +  str(self.intelligenceCounter) + ":" + str(self.dexterityCounter) + "\n")
+            self.db.insertPlayer(self.name, self.strengthCounter, self.charismaCounter, self.intelligenceCounter, self.dexterityCounter)
 
-            playerInfo.close()
 
 
 

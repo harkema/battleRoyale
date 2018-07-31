@@ -54,6 +54,7 @@ h1 {
 h2 {
   text-align:center;
   margin-top: 40px;
+  width: 100%;
 }
 
 /* Style the top navigation bar */
@@ -86,8 +87,7 @@ h2 {
 
 #winner {
   text-align: center;
-  position: relative;
-  left: 335px;
+  width: 98%;
 }
 
 .bracket{
@@ -95,6 +95,11 @@ h2 {
   margin-left:100px;
 
 }
+
+.statement{
+  text-align:left;
+}
+
 
 table{
   width: 100%;
@@ -112,14 +117,37 @@ table{
 
   background-color: #3399ff;
   color:black;
-  position: relative;
-  left: 335px;
+  width: 50%;
+  text-align: center;
+  font-weight: bold;
+}
+
+#roundHeaders2 {
+
+  background-color: #a6a6a6;
+  color:black;
+  width: 100%;
+  text-align: center;
+  font-weight: bold;
 }
 
 #tableContent{
   background-color:#4d4dff;
   color: white;
 }
+
+#tableContent2{
+  background-color:#4d4dff;
+  color: black;
+  text-align: left;
+}
+
+.name {
+  color: black;
+  font-weight: bold;
+}
+
+
 
 .sideNav {
   height: 100%;

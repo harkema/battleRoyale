@@ -9,27 +9,15 @@
 
 <body>
   <div class = "content" id="content">
-    <table>
-      <h2> Round Results </h2>
-      <tr id = "headers">
-        <th> Player </th>
-        <th> Killed By </th>
-      </tr>
-      {% for round in killedByResults %}
-      <tbody class = "tableBody">
-        <tr>
-          <td id="roundHeaders"> Round {{loop.index}} </td>
-        <tr>
-        {% for pair in round %}
-        <tr id = "tableContent">
-          <td> {{pair[1]}} </td>
-          <td> {{pair[0]}} </td>
-        </tr>
-        {% endfor %}
-      </tbody>
+    <h2> Play-By-Play Results </h2>
+    {% for round in descResults %}
+        <div id="roundHeaders2"> Round {{loop.index}} </div>
+      {% for statement in round %}
+        <div class="statement">
+          {{statement}}
+        </div>
       {% endfor %}
-    </table>
-    <div id="winner"> Winner: {{winner}} </div>
+    {% endfor %}
   </div>
 
 

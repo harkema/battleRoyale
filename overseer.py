@@ -10,107 +10,22 @@ import mainMenu
 import matchUps
 
 import webbrowser
+import random
+
+from multiprocessing import cpu_count, Process
+import argparse
 
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('/home/kiha6349/Dropbox/battleRoyale/templates'))
 
-class BattleRoyale(object):
-    def __init__(self):
-        self.playerName = ""
-        self.strength=0
-        self.charisma=0
-        self.intelligence=0
-        self.dexterity=0
+class WebProcess(Process):
+    def __init__(self, db, battleRoyale):
+        Process.__init__(self)
+        self.db = db
+        self.battleRoyale = battleRoyale
 
-        self.db = pymysql.connect("127.0.0.1", "root", "NitrotheGreat22!", "playerDB")
-
-        self.db.autocommit(True)
-
-        self.cur = self.db.cursor()
-
-
-
-        self.insertStmt = ("INSERT INTO Player (PlayerName, Strength, Charisma, Intelligence, Dexterity)" "Values(%s, %s, %s, %s, %s)")
-        self.retrieveAllStmt = ("SELECT * FROM Player")
-
-    def connectDB(self):
-        self.db = pymysql.connect("127.0.0.1", "root", "NitrotheGreat22!", "playerDB")
-
-        self.db.autocommit(True)
-
-        self.cur = self.db.cursor()
-
-    def disconnect(self):
-        self.db.close()
-
-    def retrievePlayerInfo(self):
-        """
-        Gets all row from the player db
-        """
-        self.cur.execute(self.retrieveAllStmt)
-        self.playerSelect = self.cur.fetchall()
-
-        return self.playerSelect
-
-
-    def readPlayerInfo(self):
-        """
-        Reads the player information provided through the GUI and adds it to the database
-        """
-        with open("playerInfo.txt", mode = "r") as playerInfo:
-
-            for playerLine in playerInfo.readlines():
-                if playerLine != "":
-
-                    playerList = playerLine.split(":")
-
-                    self.playerName = playerList[0]
-                    self.strength = int(playerList[1])
-                    self.charisma = int(playerList[2])
-                    self.intelligence = int(playerList[3])
-                    self.dexterity = int(playerList[4])
-
-                    #Adding each player to database
-                    data = (self.playerName, self.strength, self.charisma, self.intelligence, self.dexterity)
-                    self.cur.execute(self.insertStmt, data)
-                    self.db.commit()
-
-
-
-        playerInfo.close()
-        open("playerInfo.txt", "w").close()
-
-    def deletePlayer(self, pid):
-        """
-        Option to delete player from the database
-        """
-        deleteStmt="DELETE FROM Player WHERE PersonalId = '%d'"
-        self.cur.execute(deleteStmt % pid)
-
-    def createMatch(self):
-        """
-        Creates a match object that lets the battle begin
-        """
-        #Generates matchups using player database
-        match=matchUps.Match()
-        playersRemaining = match.storePlayerInfo()
-
-        #Clears the results from the previous round
-        open("RoundResults.txt", "w").close()
-
-        #Clears the descriptions from the previous round
-        open("RoundDescriptions.txt", "w").close()
-
-        #Rounds proceed until there is a winner
-        while playersRemaining != 1:
-            playersRemaining = match.battleCycle()
-            #Writes both winners and the activities to their own files
-            match.writeRoundResults()
-
-        #Writes the kill counts to file
-        match.writeBattleResults()
-
-    def startWebApp(self):
+    def run(self):
+        #Opens web page
         conf = {
             '/': {
                 'tools.sessions.on': True,
@@ -121,30 +36,274 @@ class BattleRoyale(object):
                 'tools.staticdir.dir': './public'
             }
         }
-        cherrypy.quickstart(Results(), '/', conf)
-        webbrowser.open("http://127.0.0.1:8080")
+        cherrypy.quickstart(Results(self.db, self.battleRoyale), '/', conf)
 
-def readRoundDesc():
+
+class Database(object):
+    def __init__(self, server="server", username="", password="", dbName=""):
+        self.server=server
+        self.username = username
+        self.password = password
+        self.dbName = dbName
+
+        #Tables to create
+        self.playerTable = "Player"
+        self.roundTable = "Round"
+        self.deathTable = "Death"
+
+        self.cxn = None
+
+        self.cur = None
+
+        self.playerNames = []
+
+    def connectDB(self):
+        """
+        Establishing connection to the database
+        """
+        self.cxn = pymysql.connect(self.server, self.username, self.password, self.dbName)
+
+        self.cur = self.cxn.cursor()
+
+        self.cxn.autocommit(True)
+
+
+    def createDB(self):
+        """
+        Creates the three tables for the database
+        """
+
+        #Player information
+        createStmt = "CREATE TABLE IF NOT EXISTS Player (PersonalID INT NOT NULL AUTO_INCREMENT,\
+                                                       PlayerName VARCHAR(30) NOT NULL,\
+                                                       Strength INT,\
+                                                        Charisma INT,\
+                                                         Intelligence INT,\
+                                                          Dexterity INT,\
+                                                            Kills INT,\
+                                                           PRIMARY KEY (PersonalID))"
+
+        self.cur.execute(createStmt)
+
+        #Round activites
+        createStmt = "CREATE TABLE IF NOT EXISTS Round (RoundID INT NOT NULL AUTO_INCREMENT,\
+                                                       RoundNumber INT not null,\
+                                                       PlayerOne VARCHAR(30),\
+                                                        PlayerTwo VARCHAR(30),\
+                                                         Scenario TEXT,\
+                                                           PRIMARY KEY (RoundID))"
+
+        self.cur.execute(createStmt)
+
+        #Kills completed during the battle
+        createStmt = "CREATE TABLE IF NOT EXISTS Death (KillID INT NOT NULL AUTO_INCREMENT,\
+                                                      Killer VARCHAR(30),\
+                                                      Victim VARCHAR(30),\
+                                                      PRIMARY KEY (KillID))"
+
+        self.cur.execute(createStmt)
+
+    def checkBattleID(self, battleID):
+        """
+        Checks if BattleID already exists
+
+        Input: battleID <int>
+        """
+
+        checkStmt = "SELECT * FROM Death WHERE EXISTS (SELECT * FROM Death WHERE BattleID=%d)"
+
+        return self.cur.execute(checkStmt % battleID)
+
+
+    def insertPlayer(self, name, strength, charisma, intelligence, dexterity):
+        """
+        Inserts a new player into the the database
+
+        Input: name <str>, strength <int>, charisma <int>, intelligence <int>, dexterity <int>
+        """
+        insertStmt = ("INSERT INTO Player (PlayerName, Strength, Charisma, Intelligence, Dexterity)" "Values(%s, %s, %s, %s, %s)")
+
+        data = (name, strength, charisma, intelligence, dexterity)
+
+        self.cur.execute(insertStmt, data)
+
+    def retrievePlayerInfo(self):
+        """
+        Retrieves player information
+        """
+        retrieveAllStmt = ("SELECT * FROM Player")
+
+        self.cur.execute(retrieveAllStmt)
+
+        self.playerSelect = self.cur.fetchall()
+
+        for row in self.playerSelect:
+            self.playerNames.append(row[1])
+
+        return self.playerSelect
+
+    def retrieveRoundInfo(self, battleID):
+        """
+        Retrieves round activites for a particular battle
+
+        Input: battleID <int>
+        """
+
+        retrieveAllStmt = ("SELECT * FROM Round WHERE BattleID = %d")
+
+        self.cur.execute(retrieveAllStmt % battleID)
+
+        self.roundSelect = self.cur.fetchall()
+
+        return self.roundSelect
+
+    def retrieveKillInfo(self, battleID):
+        """
+        Retrieves kills for a particular battle
+
+        Input: battleID <int>
+        """
+        retrieveAllStmt = ("SELECT * FROM Death WHERE BattleID = %d")
+
+        self.cur.execute(retrieveAllStmt % battleID)
+
+        self.deathSelect = self.cur.fetchall()
+
+        return self.deathSelect
+
+    def deletePlayer(self, pid):
+        """
+        Deletes player from the database
+
+        Input: pid <int>
+        """
+        deleteStmt="DELETE FROM Player WHERE PersonalId = '%d'"
+        self.cur.execute(deleteStmt % pid)
+
+    def addRoundResults(self, battleID, roundNumber, killer, victim):
+        """
+        Adds kill information to the database
+
+        Input: battleID <int>, roundNumber <int>, killer <str>, victim <str>
+        """
+        insertKillStmt = ("INSERT INTO Death (BattleID, RoundNumber, Killer, Victim)" "Values(%s, %s, %s, %s)")
+
+        data = (battleID, roundNumber, killer, victim)
+
+        self.cur.execute(insertKillStmt, data)
+
+    def addRoundDesc(self, battleID, roundNumber, playerOne, playerTwo, scenario):
+        """
+        Add round activities to the database
+
+        Input: battleID <int>, roundNumber <int>, playerOne <str>, scenario <str>
+        """
+        insertDescStmt = ("INSERT INTO Round (BattleID, RoundNumber, PlayerOne, PlayerTwo, Scenario)" "Values(%s, %s, %s, %s, %s)")
+
+        data = (battleID, roundNumber, playerOne, playerTwo, scenario)
+
+        self.cur.execute(insertDescStmt, data)
+
+    def addKills(self, playerID, numberOfKills):
+        """
+        Add kills for a existing player tabvle
+        """
+        insertKillNumberStmt = ("UPDATE Player SET Kills = %d WHERE PersonalID = %d")
+
+        self.cur.execute(insertKillNumberStmt % (numberOfKills, playerID))
+
+
+class BattleRoyale(object):
+    def __init__(self, db):
+        self.playerName = ""
+        self.strength=0
+        self.charisma=0
+        self.intelligence=0
+        self.dexterity=0
+
+
+        self.playerNames=[]
+
+        self.db = db
+
+        #Generates battleID
+        self.battleID = random.randint(0, 1000)
+
+        #Generates battleID until it is unique
+        if self.db.checkBattleID(self.battleID) ==True:
+            while self.db.checkBattleID(self.battleID) == True:
+                self.battleID = random.randint(0, 1000)
+
+
+    def createMatch(self):
+        """
+        Creates a match object that lets the battle begin
+        """
+        self.roundNumber = 0
+
+        #Generates matchups using player database
+        match=matchUps.Match(self.db, self.battleID)
+        playersRemaining = match.storePlayerInfo()
+
+        #Rounds proceed until there is a winner
+        while playersRemaining != 1:
+            playersRemaining = match.battleCycle(self.roundNumber+1)
+
+            #Writes both winners and the activities to their own files
+            match.addRoundResultsDB()
+            self.roundNumber=self.roundNumber+1
+
+        #Writes the kill counts to file
+        match.addBattleResultsDB()
+
+
+
+def readRoundDesc(db, battleID):
     """
     Reads the round desc from file and adds to a list that can be interpreted by jinja
     """
     descList=[]
     roundList=[]
+    namesList=[]
+    prevRound=1
 
-    with open("RoundDescriptions.txt", mode="r") as roundDesc:
-        for line in roundDesc.readlines():
-            if line == "\n":
-                descList.append(roundList)
-                roundList=[]
-                continue
+    #Retrieves round descriptions from the database
+    roundInfo = db.retrieveRoundInfo(battleID)
 
-            line=line.strip()
+    #Tracks which round is currently being manipulated
+    index=0
 
-            roundList.append(line)
+    #Iterates through each round in the retrieved info
+    for roundTup in roundInfo:
+        #If is is the last round, the round description is added to the list which is then added to the overall list
+        if roundTup == roundInfo[-1]:
+            roundList.append(roundTup[5])
+            descList.append(roundList)
+            break
 
-        return roundList
+        #If the round is different, a new sublist is created for the new round
+        if roundTup[2] != prevRound:
+            descList.append(roundList)
+            roundList=[]
 
-def readRoundResults():
+        #Adds player names to namesList for reference by HTML
+        if roundTup[3] not in namesList:
+            namesList.append(roundTup[3])
+
+        if roundTup[4] not in namesList:
+            namesList.append(roundTup[4])
+
+        #Adds the round description to the sublist that is separated by round
+        roundList.append(roundTup[5])
+
+        index=index+1
+
+        #Compares what the round number was for the previous description to see whether the round has advanced
+        prevRound=roundInfo[index-1][2]
+
+    return descList, namesList
+
+def readRoundResults(db, battleID):
     """
     Reads the overall results of the round and adds to a list that be interpreted by jinja
     """
@@ -153,102 +312,139 @@ def readRoundResults():
     #List to separate the results by round
     roundList=[]
 
-    with open("RoundResults.txt", mode="r") as roundResults:
-        for line in roundResults.readlines():
-            #Signifies the end of a round
-            if line == "\n":
-                killedByList.append(roundList)
-                roundList=[]
-                continue
+    prevRound=1
 
-            line=line.strip()
-            lineList = line.split(": ")
+    #Retrieves information about who killed who
+    deathInfo = db.retrieveKillInfo(battleID)
 
-            rowList = []
-            rowList.append(lineList[0])#killer
-            rowList.append(lineList[1])#victim
+    index=0
+    #Iterates through the the retrieved information which contains killer and victims
+    for deathEventTup in deathInfo:
+        #Contains killer and victim
+        pairList=[]
 
-            roundList.append(rowList)
+        #If the round is different, a new sublist is created for the new round
+        if deathEventTup[1] != prevRound:
+            killedByList.append(roundList)
+            roundList=[]
 
-    winner = killedByList[-1][-1][0]
+        #If is is the last round, the round description is added to the list which is then added to the overall list
+        if deathEventTup == deathInfo[-1]:
+            pairList.append(deathEventTup[3])
+            pairList.append(deathEventTup[4])
+            roundList.append(pairList)
+            killedByList.append(roundList)
+            break
+
+        #Adds the two names to a list that is added to the round sublist
+        pairList.append(deathEventTup[3])
+        pairList.append(deathEventTup[4])
+        roundList.append(pairList)
+
+        index=index+1
+
+        #Compares what the round number was for the previous description to see whether the round has advanced
+        prevRound=deathInfo[index-1][1]
+
+    #Stores the overall battle winner
+    winner = killedByList[-1][0][0]
 
     return killedByList, winner
 
-def readBattleResults():
+def readBattleResults(db):
     """
     Reads the kill count from the battle and return to be interpreted by jinja
     """
     #List of lists with each of the smaller lists containing a player and their kill count
     killsList=[]
 
-    with open("Kills.txt", mode="r") as battleResults:
-        for line in battleResults.readlines():
-            line=line.strip()
-            lineList=line.split(": ")
+    playerInfo = db.retrievePlayerInfo()
 
-            rowList = []
-            rowList.append(lineList[0])
-            rowList.append(int(lineList[1]))
+    for playerTup in playerInfo:
+        #Contains player and kill count
+        tempList=[]
+        tempList.append(playerTup[1])
+        tempList.append(playerTup[6])
 
-            killsList.append(rowList)
-            killsList.sort(key=lambda x: x[1], reverse=True)
+        #Overall list
+        killsList.append(tempList)
+
+    #Sorts list in descending order based on kill counts
+    killsList.sort(key=lambda x: x[1], reverse=True)
 
     return killsList
 
 class Results(object):
+    def __init__(self, db, battleRoyale):
+        self.db = db
+        self.battleRoyale = battleRoyale
+
+        self.battleID = battleRoyale.battleID
+
+
     @cherrypy.expose
     def index(self):
         template = env.get_template("home.html")
 
         return template.render()
 
-    @cherrypy.expose
-    def roundResults(self):
-        killedByList, winner = readRoundResults()
-
-        template = env.get_template("roundResults.html")
-
-        return template.render(killedByResults = killedByList, winner=winner)
 
     @cherrypy.expose
     def battleResults(self):
-        killsList = readBattleResults()
+        killsList = readBattleResults(self.db)
 
         template = env.get_template("battleResults.html")
 
         return template.render(killResults =  killsList)
 
-    """
+
     @cherrypy.expose
     def roundDescriptions(self):
-        Create a page to display the activites that happened between rounds with a delay animation for each line
-    """
+        #A list containing sublists of rounds which contain sublists of statements where each element is a word
+        descList, namesList = readRoundDesc(self.db,  self.battleID)
+
+        template = env.get_template("roundDesc.html")
+
+        return template.render(descResults = descList, playerNames=namesList)
+
+
+    @cherrypy.expose
+    def roundResults(self):
+        #A list containing sublists that divide the rounds each with lists that contain the killer and victim pairs
+        killedByList, winner = readRoundResults(self.db, self.battleID)
+
+
+        template = env.get_template("roundResults.html")
+
+        return template.render(killedByResults = killedByList, winner=winner)
 
 
 def main():
+    #Creating Database object
+    db = Database("127.0.0.1", "root", "NitrotheGreat22!", "playerDB")
+
+    #Connecting to database
+    db.connectDB()
+
+    #Creating tables for database
+    db.createDB()
+
     #Creates overseer object
-    battleRoyale = BattleRoyale()
+    battleRoyale = BattleRoyale(db)
+
+    #Creating process that will open the web page
+    process = WebProcess(db, battleRoyale)
+    process.start()
 
     #Opens GUI - allows user to input attribute information
-    app=mainMenu.App()
+    app=mainMenu.App(db, battleRoyale)
+
     app.exec_()
+
+    #Close the web page when the app closes
+    process.terminate()
     app.quit()
 
-    #Adds player info to db
-    battleRoyale.readPlayerInfo()
-
-    #Open web page
-    conf = {
-        '/': {
-            'tools.sessions.on': True,
-            'tools.staticdir.root': os.path.abspath(os.getcwd())
-        },
-        '/static': {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': './public'
-        }
-    }
-    cherrypy.quickstart(Results(), '/', conf)
 
 if(__name__ == "__main__"):
     main()

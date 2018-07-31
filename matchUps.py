@@ -6,13 +6,22 @@ import numpy
 import os
 
 class Match(object):
-    def __init__(self):
+    def __init__(self, db, battleID):
         #Stores players remaining in the battle
         self.allPlayersList = []
         #Temporarily stores the tuple (containg player info) that has been converted to this list
         self.tempPlayerList = []
 
-        self.strengthScenarios = [" was hit with a stick by  ", " was pushed down a mountain by ", " was punched in the nose by ", " was kicked in the shins ", " strangled by " ]
+        #Database containing player info and round results
+        self.db = db
+
+        #Unique battleID that remains until battlecycle is complete
+        self.battleID = battleID
+
+        self.playerNames = []
+
+
+        self.strengthScenarios = [" was hit with a stick by  ", " was pushed down a mountain by ", " was punched in the nose by ", " was kicked in the shins by ", " was strangled by " ]
         self.dexterityScenarios  = [" fell into a river while following ", " failed to dodge a rock thrown by  ", " fell out of a tree after the branch was broken by  "]
         self.intelligenceScenarios = [" ate toxic berries left by ", " was set on fire by ", " slept through a surprise attack from "]
         self.charismaScenarios = [" was beaten up by a new gang led by " , " cried after being yelled at by ", " was stabbed in the back (literally and metaphorically) by ", " was attacked by a wolf who was befriended by "  ]
@@ -54,7 +63,10 @@ class Match(object):
 
         #overseer.BattleRoyale().connectDB()
         #Gets all information from the database
-        self.allPlayers = overseer.BattleRoyale().retrievePlayerInfo()
+        self.allPlayers = self.db.retrievePlayerInfo()
+
+        for row in self.allPlayers:
+            self.playerNames.append(row[1])
 
         #For each tuple within the overall table tuple, it is converted into a list
         #and added to a list off all players and their attributes
@@ -66,6 +78,10 @@ class Match(object):
         for player in self.allPlayersList:
             self.playerKillsDict[player[1]] = 0
 
+
+        self.recordAllPlayersList = []
+
+        self.recordAllPlayersList = self.allPlayersList.copy()
 
 
         return len(self.allPlayersList)
@@ -80,27 +96,47 @@ class Match(object):
         playerCol = random.randint(0, 10)
 
 
+        statement = ("%s ran away" % player[1])
+        self.roundDesc.append(statement)
+        print(statement)
 
-        print("%s ran away\n" % player[1])
 
         #Sees if position the player ran to contains an item
         if self.map[playerRow][playerCol] in self.itemsDict.keys():
             #Checks what attribute the item increases
-            if self.itemsDict[self.map[playerRow][playerCol]] == "strength":
+            increased = self.itemsDict[self.map[playerRow][playerCol]]
+
+            if increased == "strength":
                 player[2]=player[2]+2
-                print("%s picked up the %s" % (player[1], self.map[playerRow][playerCol]))
 
-            elif self.itemsDict[self.map[playerRow][playerCol]] == "charisma":
+                statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
+                self.roundDesc.append(statement)
+
+                print(statement)
+
+            elif increased == "charisma":
                 player[3]=player[3]+2
-                print("%s picked up the %s" % (player[1], self.map[playerRow][playerCol]))
 
-            elif self.itemsDict[self.map[playerRow][playerCol]] == "intelligence":
+                statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
+                self.roundDesc.append(statement)
+
+                print(statement)
+
+            elif increased == "intelligence":
                 player[4]=player[4]+2
-                print("%s picked up the %s" % (player[1], self.map[playerRow][playerCol]))
+
+                statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
+                self.roundDesc.append(statement)
+
+                print(statement)
 
             else:
                 player[5]=player[5]+2
-                print("%s picked up the %s" % (player[1], self.map[playerRow][playerCol]))
+
+                statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
+                self.roundDesc.append(statement)
+
+                print(statement)
 
     def addItems(self):
         """
@@ -118,7 +154,10 @@ class Match(object):
             self.map[itemRow][itemCol] = item
 
 
-    def battleCycle(self):
+    def battleCycle(self, roundNumber):
+
+        #Tracks round
+        self.roundNumber = roundNumber
 
         #Tracks number of hits each player takes in a given round
         self.hitsTakenDict={}
@@ -209,7 +248,10 @@ class Match(object):
                     self.scenarioGenerator(pair[1])
             #Case in which attribute points are the same between players
             elif pair[0][2] == pair[1][2]:
-                print("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
+                print(statement)
+                self.roundDesc.append(statement)
+
                 self.scenarioGenerator(pair)
 
             else:
@@ -255,12 +297,14 @@ class Match(object):
             elif pair[0][5] == pair[1][5]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
                 print(statement)
+                self.roundDesc.append(statement)
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
                 print(statement)
                 self.roundDesc.append(statement)
+
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
 
@@ -283,6 +327,7 @@ class Match(object):
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
                 print(statement)
                 self.roundDesc.append(statement)
+
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
 
@@ -300,12 +345,15 @@ class Match(object):
             elif pair[0][4] == pair[1][4]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
                 print(statement)
+                self.roundDesc.append(statement)
+
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
                 print(statement)
                 self.roundDesc.append(statement)
+
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
 
@@ -328,6 +376,7 @@ class Match(object):
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
                 print(statement)
                 self.roundDesc.append(statement)
+
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
                 if self.isDead(pair[1][1]):
@@ -344,12 +393,15 @@ class Match(object):
             elif pair[0][3] == pair[1][3]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
                 print(statement)
+                self.roundDesc.append(statement)
+
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
                 print(statement)
                 self.roundDesc.append(statement)
+
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
                 if self.isDead(pair[0][1]):
@@ -374,8 +426,6 @@ class Match(object):
             return True;
         else:
             return False;
-
-
 
     def scenarioGenerator(self, pair):
         """
@@ -467,58 +517,49 @@ class Match(object):
             else:
                 self.assignNumsDict[playerList[1]] = assignNum
 
-    def writeRoundResults(self):
+    def addRoundResultsDB(self):
         """
-        Writes results of each round to file that is immediately sent to the webpage for viewing
-        """
-        with open("RoundResults.txt", mode="a") as roundResults:
-            for killed, killer in self.killedByDict.items():
-                roundResults.write(killer + ": " + killed + "\n")
-
-            roundResults.write("\n")
-
-        with open("RoundDescriptions.txt", mode="a") as roundDesc:
-            for statement in self.roundDesc:
-                roundDesc.write(statement + "\n")
-
-            roundDesc.write("\n")
-
-
-    def writeBattleResults(self):
-        """
-        Writes results of the overall battle (total kills) to file
+        Adds results of each round to database that is immediately sent to the webpage for viewing
         """
 
-        self.tempKillsDict={}
+        for killed, killer in self.killedByDict.items():
+            self.db.addRoundResults(self.battleID, self.roundNumber, killer, killed)
 
+        self.playerOne = ""
+        self.playerTwo=""
 
-        with open("Kills.txt", mode="r") as battleResults:
-            firstLine = battleResults.readline()
+        for statement in self.roundDesc:
+            statementWords = statement.split(" ")
 
-            #If the first line is not empty, the kills need to be temporarily stored and added to the new kill counts
-            if firstLine != "":
-                firstLine=firstLine.strip()
-                lineList=firstLine.split(": ")
-                self.tempKillsDict[lineList[0]]=int(lineList[1])
-
-                for line in battleResults.readlines():
-                    line=line.strip()
-                    lineList=line.split(": ")
-                    self.tempKillsDict[lineList[0]]=int(lineList[1])
-
-        with open("Kills.txt", mode="w") as battleResults:
-            for killer, kills in self.playerKillsDict.items():
-                #Dictionary is empty -> file is empty and kills are being recorded for the first time
-                if not self.tempKillsDict:
-                    battleResults.write(killer + ": " + str(kills) + "\n")
-
-                #Kills are being added to already existing kill count taken from the previous iteration of the file
-                else:
-                    #Player exists previously and has not just been added
-                    if killer in self.tempKillsDict.keys():
-                        battleResults.write(killer + ": " + str(kills + self.tempKillsDict[killer]) + "\n")
+            for word in statementWords:
+                if word in self.playerNames:
+                    if self.playerOne!="":
+                        self.playerTwo=word
                     else:
-                        battleResults.write(killer + ": " + str(kills + self.playerKillsDict[killer]) + "\n")
+                        self.playerOne=word
+
+            self.db.addRoundDesc(self.battleID, self.roundNumber, self.playerOne, self.playerTwo, statement)
+
+
+
+    def addBattleResultsDB(self):
+        """
+        Adds results of the overall battle (total kills) to Player table in db
+        """
+        playerID=0
+
+
+
+        for killer, kills in self.playerKillsDict.items():
+            #Gets playerID to update kills
+            for playerTup in self.recordAllPlayersList:
+                if playerTup[1] == killer:
+                    playerID = playerTup[0]
+                    oldKillNumber = playerTup[6]
+                    break
+            totalKills = oldKillNumber+kills
+            self.db.addKills(playerID, totalKills)
+
 
 
 
