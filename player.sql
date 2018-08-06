@@ -18,7 +18,7 @@ SELECT * FROM Player;
 
 SET SQL_SAFE_UPDATES=0;
 
-DELETE FROM Player;
+DELETE FROM Player WHERE PersonalID=158;
 
 DELETE FROM Death;
 
@@ -41,3 +41,17 @@ Describe Round;
 ALTER TABLE Player MODIFY COLUMN Kills INT NOT NULL DEFAULT 0;
 
 ALTER TABLE Death CHANGE RoundID RoundNumber INT;
+
+CHECKSUM TABLE Player;
+
+Describe Death;
+
+SELECT count(*)
+FROM information_schema.columns
+WHERE table_name = "Round";
+
+SELECT 
+    Player, 
+    TABLE_ROWS 
+FROM 
+    `information_schema`.`tables` ;

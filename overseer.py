@@ -15,14 +15,22 @@ import random
 from multiprocessing import cpu_count, Process
 import argparse
 
+import json
+
+from selenium import webdriver
+
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('/home/kiha6349/Dropbox/battleRoyale/templates'))
 
+
 class WebProcess(Process):
-    def __init__(self, db, battleRoyale):
+    def __init__(self, db, battleRoyale, results, roundDescDriver):
         Process.__init__(self)
         self.db = db
         self.battleRoyale = battleRoyale
+        self.results = results
+        self.roundDescDriver = roundDescDriver
+
 
     def run(self):
         #Opens web page
@@ -36,7 +44,9 @@ class WebProcess(Process):
                 'tools.staticdir.dir': './public'
             }
         }
-        cherrypy.quickstart(Results(self.db, self.battleRoyale), '/', conf)
+        cherrypy.quickstart(self.results, '/', conf)
+
+
 
 
 class Database(object):
@@ -142,6 +152,31 @@ class Database(object):
 
         return self.playerSelect
 
+    def retrieveSinglePlayerInfo(self, pid):
+        """
+        Retrieves information for only one player
+        """
+        retrieveOneStmt = ("SELECT * FROM Player WHERE PersonalID = %d")
+
+        self.cur.execute(retrieveOneStmt % pid)
+
+        self.playerInfo = self.cur.fetchone()
+
+        return self.playerInfo
+
+    def editPlayer(self, att, changedValue, pid):
+        """
+        Edits player based on provided attribute and changed value
+        """
+        if(att == "PlayerName"):
+            editStmt = ("UPDATE Player SET %s = '%s' WHERE PersonalID = %d")
+
+        else:
+            editStmt = ("UPDATE Player SET %s = %d WHERE PersonalID = %d")
+
+        self.cur.execute(editStmt % (att, changedValue, pid))
+
+
     def retrieveRoundInfo(self, battleID):
         """
         Retrieves round activites for a particular battle
@@ -213,6 +248,23 @@ class Database(object):
         self.cur.execute(insertKillNumberStmt % (numberOfKills, playerID))
 
 
+    def getChecksum(self, tableName):
+        """
+        Returns the checksum for a table
+        """
+        checkStmt = ("CHECKSUM TABLE %s")
+
+        self.cur.execute(checkStmt % tableName)
+
+        self.checkSum = self.cur.fetchone()
+
+        if self.checkSum != None:
+            return self.checkSum[1]
+        else:
+            print("Error: Checksum not valid")
+            return -1
+
+
 class BattleRoyale(object):
     def __init__(self, db):
         self.playerName = ""
@@ -223,6 +275,8 @@ class BattleRoyale(object):
 
 
         self.playerNames=[]
+
+        self.refresh = False
 
         self.db = db
 
@@ -239,23 +293,10 @@ class BattleRoyale(object):
         """
         Creates a match object that lets the battle begin
         """
-        self.roundNumber = 0
-
-        #Generates matchups using player database
         match=matchUps.Match(self.db, self.battleID)
         playersRemaining = match.storePlayerInfo()
 
-        #Rounds proceed until there is a winner
-        while playersRemaining != 1:
-            playersRemaining = match.battleCycle(self.roundNumber+1)
-
-            #Writes both winners and the activities to their own files
-            match.addRoundResultsDB()
-            self.roundNumber=self.roundNumber+1
-
-        #Writes the kill counts to file
-        match.addBattleResultsDB()
-
+        return match, playersRemaining
 
 
 def readRoundDesc(db, battleID):
@@ -347,7 +388,10 @@ def readRoundResults(db, battleID):
         prevRound=deathInfo[index-1][1]
 
     #Stores the overall battle winner
-    winner = killedByList[-1][0][0]
+    if len(killedByList) == 4:
+        winner = killedByList[-1][0][0]
+    else:
+        winner = "None"
 
     return killedByList, winner
 
@@ -374,12 +418,43 @@ def readBattleResults(db):
 
     return killsList
 
+
+
 class Results(object):
-    def __init__(self, db, battleRoyale):
+    def __init__(self, db, battleRoyale,roundDescDriver):
         self.db = db
         self.battleRoyale = battleRoyale
 
         self.battleID = battleRoyale.battleID
+
+        self.roundDescDriver = roundDescDriver
+
+        self.beforeChecksum = self.db.getChecksum("Round")
+
+        self.roundChecksums = []
+
+        self.roundChecksums.append(self.beforeChecksum)
+
+        self.checksumChange = False
+
+
+    def verifyChecksum(self):
+        #checksum = self.db.getChecksum("Round")
+
+        #if self.roundChecksums[-1] != checksum:
+                #self.checksumChange = True
+                #self.roundResultsDriver.get("http://127.0.0.1:8080/roundResults")
+        self.roundDescDriver.get("http://127.0.0.1:8080/roundResults")
+        #else:
+            #self.checksumChange = False
+        #self.roundChecksums.append(checksum)
+        #reload after each get
+
+    def showScoreboard(self):
+        self.roundDescDriver.get("http://127.0.0.1:8080/battleResults")
+
+    def showHomePage(self):
+        self.roundDescDriver.get("http://127.0.0.1:8080/index")
 
 
     @cherrypy.expose
@@ -405,18 +480,16 @@ class Results(object):
 
         template = env.get_template("roundDesc.html")
 
-        return template.render(descResults = descList, playerNames=namesList)
+        return template.render(descResults = descList, playerNames=namesList, checksumChange=json.dumps(self.checksumChange))
 
 
     @cherrypy.expose
     def roundResults(self):
-        #A list containing sublists that divide the rounds each with lists that contain the killer and victim pairs
         killedByList, winner = readRoundResults(self.db, self.battleID)
-
 
         template = env.get_template("roundResults.html")
 
-        return template.render(killedByResults = killedByList, winner=winner)
+        return template.render(killedByResults = killedByList, winner=winner, checksumChange=json.dumps(self.checksumChange))
 
 
 def main():
@@ -432,17 +505,29 @@ def main():
     #Creates overseer object
     battleRoyale = BattleRoyale(db)
 
-    #Creating process that will open the web page
-    process = WebProcess(db, battleRoyale)
+    #roundResultsDriver = webdriver.Chrome()
+    roundDescDriver = webdriver.Chrome()
+
+
+    #Generates webpage
+    resultsWebpage = Results(db, battleRoyale, roundDescDriver)
+
+    #Creating process that will open the web page; staging the server
+    process = WebProcess(db, battleRoyale, resultsWebpage, roundDescDriver)
+
     process.start()
 
+    #roundResultsDriver.get("http://127.0.0.1:8080/roundResults")
+    roundDescDriver.get("http://127.0.0.1:8080/index")
+
     #Opens GUI - allows user to input attribute information
-    app=mainMenu.App(db, battleRoyale)
+    app=mainMenu.App(db, battleRoyale, resultsWebpage)
 
     app.exec_()
 
     #Close the web page when the app closes
     process.terminate()
+
     app.quit()
 
 

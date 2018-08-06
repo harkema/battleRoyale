@@ -7,20 +7,19 @@ import sys
 import overseer
 import webbrowser
 
-
 class App(QApplication):
-    def __init__(self, db, battleRoyale):
+    def __init__(self, db, battleRoyale, resultsWebpage):
         """
         Main application
         """
         QApplication.__init__(self, sys.argv)
         self.db = db
         self.setApplicationName("Battle Royale")
-        self.mainWindow = MainWindow(self.db, battleRoyale)
+        self.mainWindow = MainWindow(self.db, battleRoyale, resultsWebpage)
         self.mainWindow.show()
 
 class MainWindow(QMainWindow):
-    def __init__(self, db, battleRoyale):
+    def __init__(self, db, battleRoyale, resultsWebpage):
         """
         Main Window w/ option to enter a new player and start the battle"
         """
@@ -30,13 +29,13 @@ class MainWindow(QMainWindow):
 
         self.db = db
 
-        self.mainWidget = MainWidget(self.db, battleRoyale)
+        self.mainWidget = MainWidget(self.db, battleRoyale, resultsWebpage)
         self.setCentralWidget(self.mainWidget)
 
         self.resize(200, 500)
 
 class MainWidget(QWidget):
-    def __init__(self, db, battleRoyale):
+    def __init__(self, db, battleRoyale, resultsWebpage):
         """
         Lets user manipulate player database and start the battle
         """
@@ -51,6 +50,10 @@ class MainWidget(QWidget):
         self.db = db
 
         self.battleRoyale = battleRoyale
+
+        self.results = resultsWebpage
+
+        self.searchResults = self.db.retrievePlayerInfo()
 
         #Welcome label
         self.welcomeLabel = QLabel("Welcome to the Battle Royale!")
@@ -74,10 +77,22 @@ class MainWidget(QWidget):
         self.buttonLayout.addWidget(self.deletePushButton)
         self.deletePushButton.clicked.connect(self.deletePlayer)
 
+        #Show all players that can be edited and edit
+        self.editPushButton = QPushButton("Edit Player")
+        self.buttonLayout.addWidget(self.editPushButton)
+        self.editPushButton.clicked.connect(self.editPlayer)
+
         #Opens webpage
-        self.openResultsPushButton = QPushButton("View Results")
+        self.openResultsPushButton = QPushButton("View Scoreboard")
         self.buttonLayout.addWidget(self.openResultsPushButton)
         self.openResultsPushButton.clicked.connect(self.openWebBrowser)
+        self.openResultsPushButton.setEnabled(False)
+
+        #Shows events of past battle
+        self.historyPushButton = QPushButton("View Past Battle History")
+        self.buttonLayout.addWidget(self.historyPushButton)
+        self.historyPushButton.clicked.connect(self.showHistory)
+
 
         #Creating menu bar
         self.menuBar = QMenuBar()
@@ -101,6 +116,22 @@ class MainWidget(QWidget):
         self.playerMenu.addAction(self.viewPlayersAction)
         self.viewPlayersAction.triggered.connect(self.showView)
 
+
+        #Creatings results menu
+        self.resultsMenu = QMenu("Results")
+        self.menuBar.addMenu(self.resultsMenu)
+
+        #Creating view home option
+        self.homeAction = QAction("View home page...", self.resultsMenu)
+        self.resultsMenu.addAction(self.homeAction)
+        self.homeAction.triggered.connect(self.openHomePage)
+
+        #Creating view scoreboad option
+        self.scoreboardAction = QAction("View scoreboard...", self.resultsMenu)
+        self.resultsMenu.addAction(self.scoreboardAction)
+        self.scoreboardAction.triggered.connect(self.openWebBrowser)
+
+        #Adding Picture
         self.shieldLabel = QLabel()
         self.shieldPixmap = QPixmap("/home/kiha6349/Dropbox/battleRoyale/public/images/shield.png")
         self.shieldLabel.setPixmap(self.shieldPixmap)
@@ -117,12 +148,32 @@ class MainWidget(QWidget):
         self.newPlayerPushButton.clicked.connect(self.showAttributes)
         self.startPushButton.clicked.connect(self.startBattle)
 
+    def showHistory(self):
+        """
+        Opens dialog window that lets user enter a battle id and get results from that battle
+        """
 
+        self.historyDialog = HistoryDialog(self.db)
+        self.historyDialog.show()
+
+    def editPlayer(self):
+        """
+        Opens dialog window that lets user select player to edit
+        """
+        self.editDialog = EditDialog(self.searchResults, self.db,)
+        self.editDialog.show()
+
+    def openHomePage(self):
+        """
+        Opens the home page of the results webpage
+        """
+
+        self.results.showHomePage()
     def openWebBrowser(self):
         """
         Opens results of each round and the battle in a webpage
         """
-        webbrowser.open("http://127.0.0.1:8080")
+        self.results.showScoreboard()
 
     def showAttributes(self):
         """
@@ -154,11 +205,9 @@ class MainWidget(QWidget):
         """
         Opens dialog window that lets user view players before starting battle
         """
-        self.searchResults = self.db.retrievePlayerInfo()
-
-        self.startDialog = StartDialog(self.searchResults, self.db, self.battleRoyale)
+        self.startDialog = StartDialog(self.searchResults, self.db, self.battleRoyale, self.results)
         self.startDialog.show()
-
+        self.openResultsPushButton.setEnabled(True)
 
 class ResponseLabel(QLabel):
     def __init__(self, text, layout, row):
@@ -227,8 +276,211 @@ class NumberComboBox(QComboBox):
     def currentRating(self):
         return self.currentIndex()
 
+class ViewHistoryDialog(QDialog):
+    def __init__(self, db, battleID):
+        """
+        Shows record of who killed who during a given battle
+        """
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+
+        self.db = db
+        self.battleID = battleID
+
+        self.trackRound = 1
+
+        self.closePushButton = QPushButton("Close")
+        self.closePushButton.clicked.connect(self.close)
+
+        #Creating tab bar and tabs
+        self.battleTabBar = QTabWidget()
+        self.killsTab = QWidget()
+        self.playTab = QWidget()
+
+        #Addings tabs to tab bar
+        self.battleTabBar.addTab(self.killsTab, "Kills")
+        #self.battleTabBar.addTab(self.playTab, "Play-by-Play")
+
+        #Adding kills tab layout
+        self.killsTab.layout = QVBoxLayout()
+        self.killsTab.setLayout(self.killsTab.layout)
+
+        #Adding play-by-play tab layout
+        self.playTab.layout = QVBoxLayout()
+        #self.playTab.setLayout(self.playTab.layout)
+
+        #Getting battle kill and play-by-play info
+        self.battleKills = self.db.retrieveKillInfo(self.battleID)
+        self.playInfo = self.db.retrieveRoundInfo(self.battleID)
+
+        #Labels rounds
+        self.roundLabel = QLabel(str(self.trackRound))
+        self.roundLabel.setFont(QFont("Arial", 16))
+
+        #Adding round label to the kill tab layout
+        self.killsTab.layout.addWidget(self.roundLabel, alignment = Qt.AlignCenter)
+
+        #Adding scroll area for play-by-play
+        self.scrollArea = QScrollArea()
+        self.scrollLayout = QVBoxLayout()
+
+        self.scrollArea.setFrameShape(QFrame.Box)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scrollArea.setWidgetResizable(True)
+        #self.playTab.layout.addWidget(self.scrollArea)
+
+        self.scrollArea.setLayout(self.playTab.layout)
+
+        #Adding kill information to labels for the kill tab
+        for row in self.battleKills:
+            #Accounting for round label
+            if row[1] != self.trackRound:
+                self.trackRound=self.trackRound+1
+                self.roundLabel = QLabel(str(self.trackRound))
+                self.roundLabel.setFont(QFont("Arial", 16))
+                self.killsTab.layout.addWidget(self.roundLabel, alignment = Qt.AlignCenter)
+
+            self.killLabel = QLabel(row[3] + " killed " + row[4])
+            self.killsTab.layout.addWidget(self.killLabel)
+
+
+
+        """
+        #Adding play by play info to labels for the play tab
+        for row in self.playInfo:
+            if row[2] != self.trackRound:
+                self.trackRound=self.trackRound+1
+                self.roundLabel = QLabel(str(self.trackRound))
+                self.roundLabel.setFont(QFont("Arial", 16))
+                self.playTab.layout.addWidget(self.roundLabel, alignment = Qt.AlignCenter)
+
+            self.playLabel = QLabel(row[5])
+            self.playTab.layout.addWidget(self.playLabel)
+
+        """
+
+
+        #Adding tab bar to layout
+        self.mainLayout.addWidget(self.battleTabBar)
+        self.mainLayout.addWidget(self.closePushButton)
+
+        def close(self):
+            self.accept()
+
+class HistoryDialog(QDialog):
+    def __init__(self, db):
+        """
+        Prompts user to enter a battle ID and show record of kills from that battle
+        """
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+        self.historyLayout = QVBoxLayout()
+
+        self.db = db
+
+        self.historyLabel = QLabel("Enter your Battle ID to view results")
+        self.historyLabel.setFont(QFont("Arial, 16"))
+        self.historyLayout.addWidget(self.historyLabel)
+
+        self.battleIDLineEdit = QLineEdit("Enter ID")
+        self.historyLayout.addWidget(self.battleIDLineEdit)
+
+        self.seeHistoryPushButton = QPushButton("See Battle History")
+        self.seeHistoryPushButton.clicked.connect(self.seeHistory)
+
+        self.closePushButton=QPushButton("Close")
+        self.closePushButton.clicked.connect(self.close)
+
+        self.mainLayout.addLayout(self.historyLayout)
+        self.mainLayout.addWidget(self.seeHistoryPushButton)
+        self.mainLayout.addWidget(self.closePushButton)
+
+    def close(self):
+        self.accept()
+
+    def seeHistory(self):
+        self.battleID = int(self.battleIDLineEdit.text())
+
+        if self.db.checkBattleID(self.battleID):
+            self.viewHistoryDialog  =  ViewHistoryDialog(self.db, self.battleID)
+            self.viewHistoryDialog.show()
+
+        else:
+            title="Error: Battle ID Doesn't Exist"
+            msg="Please Enter a Valid Battle ID and Try Again"
+
+            QMessageBox.information(self, title, msg)
+
+class BattleDialog(QDialog):
+    def __init__(self, battleRoyale, resultsWebpage):
+        """
+        Dialog box that allows the user to proceed through battle
+        """
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+
+        self.battleRoyale = battleRoyale
+
+        self.roundNumber = 0
+
+        self.resultsWebpage = resultsWebpage
+
+        self.welcomeLabel = QLabel("Battle has started! Click on the button below to advance to the next round")
+        self.battleIDLabel = QLabel("Your Battle ID is %s" % battleRoyale.battleID)
+        self.welcomeLabel.setFont(QFont("Arial", 16))
+        self.battleIDLabel.setFont(QFont("Arial", 16))
+        self.mainLayout.addWidget(self.welcomeLabel, alignment = Qt.AlignCenter)
+        self.mainLayout.addWidget(self.battleIDLabel, alignment = Qt.AlignCenter)
+
+        #Generates matchups using player database
+        self.match, self.playersRemaining = self.battleRoyale.createMatch()
+
+        self.nextRoundPushButton = QPushButton("Next Round")
+        self.nextRoundPushButton.clicked.connect(self.nextRound)
+        self.mainLayout.addWidget(self.nextRoundPushButton)
+
+        self.shieldLabel = QLabel()
+        self.shieldLabel.resize(50, 50)
+        self.shieldPixmap = QPixmap("/home/kiha6349/Dropbox/battleRoyale/public/images/shield.png")
+        self.shieldPixmap.scaledToHeight(50)
+        self.shieldPixmap.scaledToWidth(50)
+        self.shieldLabel.setPixmap(self.shieldPixmap)
+        self.mainLayout.addWidget(self.shieldLabel)
+
+
+        self.closePushButton = QPushButton("Close")
+        self.closePushButton.clicked.connect(self.close)
+        self.mainLayout.addWidget(self.closePushButton)
+
+
+
+    def nextRound(self):
+        """
+        Retrieves information as the database is updated with results from a given round
+        """
+        self.roundNumber=self.roundNumber+1
+
+        self.playersRemaining = self.match.battleCycle(self.roundNumber)
+
+        #DB change prompts webpage to refresh
+        self.match.addRoundResultsDB()
+        self.resultsWebpage.verifyChecksum()
+
+        if self.playersRemaining == 1:
+            self.match.addBattleResultsDB()
+            self.nextRoundPushButton.setEnabled(False)
+
+            title="Battle Complete!"
+            msg="Battle Complete! See the Battle webpage to view overall results, play-by-play action, and updated kill counts"
+
+            self.completeMessageBox = QMessageBox.information(self, title, msg)
+
+
+    def close(self):
+        self.accept()
+
 class StartDialog(QDialog):
-    def __init__(self, results, db, battleRoyale):
+    def __init__(self, results, db, battleRoyale, resultsWebpage):
         """
         Dialog box that shows user players before being able to start battle
         """
@@ -244,6 +496,8 @@ class StartDialog(QDialog):
         self.db = db
 
         self.battleRoyale = battleRoyale
+
+        self.resultsWebpage = resultsWebpage
 
         #Creating Label
         self.questionLabel = QLabel("Start Battle With Following Players?")
@@ -291,12 +545,197 @@ class StartDialog(QDialog):
         """
         Starts match
         """
-        self.battleRoyale.createMatch()
+        self.battleDialog = BattleDialog(self.battleRoyale, self.resultsWebpage)
+        self.battleDialog.show()
         self.accept()
 
+class PlayerAttDialog(QDialog):
+    def __init__(self, selectedPlayer, db):
+        """
+        Shows player attributes and allows for edits to be made
+        """
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+        self.editLayout = QVBoxLayout()
+
+        self.selectedPlayerPID = selectedPlayer
+
+        self.db = db
+
+        self.playerInfo = self.db.retrieveSinglePlayerInfo(self.selectedPlayerPID)
+
+        self.genLabel = QLabel("Edit Attributes")
+        self.genLabel.setFont(QFont("Arial", 16))
+        self.editLayout.addWidget(self.genLabel)
+
+        #Edit Name
+        self.nameLabel = QLabel("Name")
+        self.nameLineEdit = QLineEdit(self.playerInfo[1])
+        self.editLayout.addWidget(self.nameLabel)
+        self.editLayout.addWidget(self.nameLineEdit)
+
+        #Edit Strength
+        self.strengthLabel = QLabel("Strength")
+        self.strengthLineEdit = QLineEdit(str(self.playerInfo[2]))
+        self.editLayout.addWidget(self.strengthLabel)
+        self.editLayout.addWidget(self.strengthLineEdit)
+
+        #Edit Charisma
+        self.charismaLabel = QLabel("Charisma")
+        self.charismaLineEdit = QLineEdit(str(self.playerInfo[3]))
+        self.editLayout.addWidget(self.charismaLabel)
+        self.editLayout.addWidget(self.charismaLineEdit)
+
+        #Edit Intelligence
+        self.intelligenceLabel = QLabel("Intelligence")
+        self.intelligenceLineEdit = QLineEdit(str(self.playerInfo[4]))
+        self.editLayout.addWidget(self.intelligenceLabel)
+        self.editLayout.addWidget(self.intelligenceLineEdit)
+
+        #Edit Dexterity
+        self.dexterityLabel = QLabel("Dexterity")
+        self.dexterityLineEdit  = QLineEdit(str(self.playerInfo[5]))
+        self.editLayout.addWidget(self.dexterityLabel)
+        self.editLayout.addWidget(self.dexterityLineEdit)
+
+        self.saveEditsPushButton = QPushButton("Save Changes")
+        self.saveEditsPushButton.clicked.connect(self.saveEdits)
+        self.saveEditsPushButton.clicked.connect(self.close)
+
+
+        self.closePushButton = QPushButton("Close")
+        self.closePushButton.clicked.connect(self.close)
+
+        self.mainLayout.addLayout(self.editLayout)
+        self.mainLayout.addWidget(self.saveEditsPushButton)
+        self.mainLayout.addWidget(self.closePushButton)
+
+
+    def close(self):
+        self.accept()
+
+    def saveEdits(self):
+        title="Save Changes"
+        msg="Save current changes?"
+
+        reply=QMessageBox.question(self, title, msg)
+
+        if reply == QMessageBox.Yes:
+
+            if self.nameLineEdit.isModified():
+                changedValue = self.nameLineEdit.text()
+                att = "PlayerName"
+
+                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+
+            if self.strengthLineEdit.isModified():
+                changedValue =int(self.strengthLineEdit.text())
+                att = "Strength"
+
+                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+
+            if self.charismaLineEdit.isModified():
+                changedValue = int(self.charismaLineEdit.text())
+                att = "Charisma"
+
+                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+
+            if self.intelligenceLineEdit.isModified():
+                changedValue = int(self.intelligenceLineEdit.text())
+                att= "Intelligence"
+
+                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+
+            if self.dexterityLineEdit.isModified():
+                changedValue = int(self.dexterityLineEdit.text())
+                att= "Dexterity"
+
+                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+
+            totalPoints = int(self.strengthLineEdit.text())+int(self.charismaLineEdit.text())+int(self.intelligenceLineEdit.text())+int(self.dexterityLineEdit.text())
+
+            print("Points", totalPoints)
+
+            if totalPoints != 20:
+                pointTitle = "Points not allocated correctly"
+                msg = "Error: Total points do not equal 20. Please reallocate points."
+
+                QMessageBox.information(self, pointTitle, msg)
+
+class EditDialog(QDialog):
+    def __init__(self, searchResults, db):
+        """
+        Dialog window for user to select player to edit
+        """
+        QDialog.__init__(self)
+        self.mainLayout = QVBoxLayout(self)
+        self.selectionLayout = QVBoxLayout()
+
+        self.results = searchResults
+
+        self.db = db
+
+        self.genLabel = QLabel("Select Player You Would Like to Edit")
+        self.mainLayout.addWidget(self.genLabel)
+
+        self.closePushButton = QPushButton("Close")
+
+        self.editPushButton=QPushButton("Edit")
+
+        self.boxList = []
+
+        #Verifies only one checkbox is selected
+        self.firstCheck=False
+
+        #Creating message box
+        for row in self.results:
+            checkBoxTxt=""
+            checkBoxTxt=str(row[0])+ " " + str(row[1])
+            self.checkBox=QCheckBox(checkBoxTxt)
+            self.boxList.append(self.checkBox)
+
+        for self.box in self.boxList:
+            self.selectionLayout.addWidget(self.box)
+            self.box.toggled.connect(self.disableBoxes)
+
+        self.mainLayout.addLayout(self.selectionLayout)
+        self.mainLayout.addWidget(self.editPushButton, alignment=Qt.AlignCenter)
+        self.mainLayout.addWidget(self.closePushButton, alignment=Qt.AlignCenter)
+
+        self.closePushButton.clicked.connect(self.closeMe)
+        self.editPushButton.clicked.connect(self.showAtt)
+        self.editPushButton.clicked.connect(self.closeMe)
+
+    def disableBoxes(self):
+        for self.disableBox in self.boxList:
+            if not self.disableBox.isChecked():
+                self.disableBox.setEnabled(False)
+
+    def closeMe(self):
+        self.accept()
+
+    def showAtt(self):
+        """
+        Show selected players attributes to be edited
+        """
+        title="Edit Player?"
+        name=""
+
+        for self.box in self.boxList:
+            #Checks that the box is checked and the first check has not already been made
+            if self.box.isChecked():
+                name = self.box.text()
+                self.checkedBox = self.box
+
+        msg="Edit " + name + "?"
+        reply=QMessageBox.question(self, title, msg)
+
+        if reply == QMessageBox.Yes:
+            pid = int(self.checkedBox.text().split(" ")[0])
+            self.playerAttDialog = PlayerAttDialog(pid, self.db)
+            self.playerAttDialog.show()
 
 class DeleteDialog(QDialog):
-
     def __init__(self, searchResults, db):
         """
         Dialog window for user to select players to delete
@@ -362,8 +801,6 @@ class ViewDialog(QDialog):
         QDialog.__init__(self)
         self.mainLayout = QVBoxLayout(self)
         self.results = searchResults
-
-        self.resize(600, 500)
 
         self.closePushButton = QPushButton("Close")
 

@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Battle</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<<link href="/static/css/stdDesign.css" rel="stylesheet">
+  <title>Battle</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/static/css/stdDesign.css" rel="stylesheet">
 </head>
-
 <body>
   <div class = "content" id="content">
     <table>
@@ -16,7 +15,7 @@
         <th> Killed By </th>
       </tr>
       {% for round in killedByResults %}
-      <tbody class = "tableBody">
+      <tbody class = "tableBody" id="tableBody">
         <tr>
           <td id="roundHeaders"> Round {{loop.index}} </td>
         <tr>
@@ -29,9 +28,10 @@
       </tbody>
       {% endfor %}
     </table>
-    <div id="winner"> Winner: {{winner}} </div>
+    {% if winner != "None" %}
+      <div id="winner"> Winner: {{winner}} </div>
+    {% endif %}
   </div>
-
 
   <div class="sideNav">
     <a href="http://127.0.0.1:8080/index">Home</a>
@@ -40,6 +40,23 @@
     <a href="http://127.0.0.1:8080/roundDescriptions">Play-By-Play Results</a>
   </div>
 
+
+  <!--<script type="text/javascript">
+
+
+    function refresh(checksumChange)
+    {
+        console.log(checksumChange);
+        if(checksumChange == true)
+        {
+          window.location.reload()
+        }
+
+    }
+
+    refresh( {{ checksumChange|safe}} )
+
+  </script> -->
 
 
 </body>

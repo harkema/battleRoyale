@@ -422,7 +422,11 @@ class Match(object):
         Input: player <str>
         """
         if self.hitsTakenDict[player] == 3:
-            print("%s has been killed\n" % player)
+            statement = ("%s has been killed\n" % player)
+            print(statement)
+            if statement not in self.roundDesc:
+                self.roundDesc.append(statement)
+
             return True;
         else:
             return False;
