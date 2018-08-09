@@ -10,13 +10,47 @@
 <body>
   <div class = "content" id="content">
     <h2> Play-By-Play Results </h2>
+    <div id="battleHeaders"> Battle 1! </div>
+    <br>
+
     {% for round in descResults %}
-        <div id="roundHeaders2"> Round {{loop.index}} </div>
-      {% for statement in round %}
-        <div class="statement">
-          {{statement}}
-        </div>
+
+      {% if counter == 4 %}
+        {% set counter = 0 %}
+        {% set battleCounter = battleCounter+1 %}
+        <div id="battleHeaders"> Battle {{battleCounter}}! </div>
+        <br>
+      {% endif %}
+
+      <div id="roundHeaders2"> Round {{loop.index}} <br> </div>
+
+      {% for statementTup in round %}
+
+          {% if statementTup[3] == "None" or statementTup[4]== "None" %}
+            <div class="statement">
+              {{statementTup[5]}}
+            </div>
+          {% else %}
+              {% if ((playerOne != statementTup[3] and playerOne != statementTup[4]) and  (playerTwo != statementTup[4] and playerTwo != statementTup[3])) or loop.index == 1%}
+
+                  {% set playerOne = statementTup[3] %}
+                  {% set playerTwo = statementTup[4] %}
+
+                <div id="matchHeaders"> {{ playerOne }} vs. {{ playerTwo }}  <br> </div>
+
+              {% endif %}
+
+            <div class="statement">
+              {{statementTup[5]}}
+            </div>
+
+          {% endif %}
+
+
       {% endfor %}
+
+      {% set counter = counter+1 %}
+
     {% endfor %}
   </div>
 

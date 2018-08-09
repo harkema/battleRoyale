@@ -13,9 +13,6 @@ import webbrowser
 import random
 
 from multiprocessing import cpu_count, Process
-import argparse
-
-import json
 
 from selenium import webdriver
 
@@ -24,12 +21,11 @@ env = Environment(loader=FileSystemLoader('/home/kiha6349/Dropbox/battleRoyale/t
 
 
 class WebProcess(Process):
-    def __init__(self, db, battleRoyale, results, roundDescDriver):
+    def __init__(self, db, battleRoyale, results):
         Process.__init__(self)
         self.db = db
         self.battleRoyale = battleRoyale
         self.results = results
-        self.roundDescDriver = roundDescDriver
 
 
     def run(self):
@@ -113,6 +109,8 @@ class Database(object):
 
         self.cur.execute(createStmt)
 
+
+
     def checkBattleID(self, battleID):
         """
         Checks if BattleID already exists
@@ -176,6 +174,18 @@ class Database(object):
 
         self.cur.execute(editStmt % (att, changedValue, pid))
 
+    def retrieveSingleRoundInfo(self, battleID, roundNumber):
+        """
+        Retrieves one round for one battle
+        """
+
+        retrieveStmt = ("SELECT Scenario FROM Round WHERE BattleID = %d and RoundNumber = %d")
+
+        self.cur.execute(retrieveStmt % (battleID, roundNumber))
+
+        self.history = self.cur.fetchall()
+
+        return self.history
 
     def retrieveRoundInfo(self, battleID):
         """
@@ -248,22 +258,6 @@ class Database(object):
         self.cur.execute(insertKillNumberStmt % (numberOfKills, playerID))
 
 
-    def getChecksum(self, tableName):
-        """
-        Returns the checksum for a table
-        """
-        checkStmt = ("CHECKSUM TABLE %s")
-
-        self.cur.execute(checkStmt % tableName)
-
-        self.checkSum = self.cur.fetchone()
-
-        if self.checkSum != None:
-            return self.checkSum[1]
-        else:
-            print("Error: Checksum not valid")
-            return -1
-
 
 class BattleRoyale(object):
     def __init__(self, db):
@@ -276,17 +270,15 @@ class BattleRoyale(object):
 
         self.playerNames=[]
 
-        self.refresh = False
-
         self.db = db
 
         #Generates battleID
-        self.battleID = random.randint(0, 1000)
+        self.battleID = 0
 
         #Generates battleID until it is unique
-        if self.db.checkBattleID(self.battleID) ==True:
-            while self.db.checkBattleID(self.battleID) == True:
-                self.battleID = random.randint(0, 1000)
+        if self.db.checkBattleID(self.battleID) != 0:
+            while self.db.checkBattleID(self.battleID) != 0:
+                self.battleID = self.battleID+1
 
 
     def createMatch(self):
@@ -299,162 +291,189 @@ class BattleRoyale(object):
         return match, playersRemaining
 
 
-def readRoundDesc(db, battleID):
-    """
-    Reads the round desc from file and adds to a list that can be interpreted by jinja
-    """
-    descList=[]
-    roundList=[]
-    namesList=[]
-    prevRound=1
-
-    #Retrieves round descriptions from the database
-    roundInfo = db.retrieveRoundInfo(battleID)
-
-    #Tracks which round is currently being manipulated
-    index=0
-
-    #Iterates through each round in the retrieved info
-    for roundTup in roundInfo:
-        #If is is the last round, the round description is added to the list which is then added to the overall list
-        if roundTup == roundInfo[-1]:
-            roundList.append(roundTup[5])
-            descList.append(roundList)
-            break
-
-        #If the round is different, a new sublist is created for the new round
-        if roundTup[2] != prevRound:
-            descList.append(roundList)
-            roundList=[]
-
-        #Adds player names to namesList for reference by HTML
-        if roundTup[3] not in namesList:
-            namesList.append(roundTup[3])
-
-        if roundTup[4] not in namesList:
-            namesList.append(roundTup[4])
-
-        #Adds the round description to the sublist that is separated by round
-        roundList.append(roundTup[5])
-
-        index=index+1
-
-        #Compares what the round number was for the previous description to see whether the round has advanced
-        prevRound=roundInfo[index-1][2]
-
-    return descList, namesList
-
-def readRoundResults(db, battleID):
-    """
-    Reads the overall results of the round and adds to a list that be interpreted by jinja
-    """
-    #Overall list that contains a list of rounds with each "round list" containing lists that include the killer and the victim
-    killedByList = []
-    #List to separate the results by round
-    roundList=[]
-
-    prevRound=1
-
-    #Retrieves information about who killed who
-    deathInfo = db.retrieveKillInfo(battleID)
-
-    index=0
-    #Iterates through the the retrieved information which contains killer and victims
-    for deathEventTup in deathInfo:
-        #Contains killer and victim
-        pairList=[]
-
-        #If the round is different, a new sublist is created for the new round
-        if deathEventTup[1] != prevRound:
-            killedByList.append(roundList)
-            roundList=[]
-
-        #If is is the last round, the round description is added to the list which is then added to the overall list
-        if deathEventTup == deathInfo[-1]:
-            pairList.append(deathEventTup[3])
-            pairList.append(deathEventTup[4])
-            roundList.append(pairList)
-            killedByList.append(roundList)
-            break
-
-        #Adds the two names to a list that is added to the round sublist
-        pairList.append(deathEventTup[3])
-        pairList.append(deathEventTup[4])
-        roundList.append(pairList)
-
-        index=index+1
-
-        #Compares what the round number was for the previous description to see whether the round has advanced
-        prevRound=deathInfo[index-1][1]
-
-    #Stores the overall battle winner
-    if len(killedByList) == 4:
-        winner = killedByList[-1][0][0]
-    else:
-        winner = "None"
-
-    return killedByList, winner
-
-def readBattleResults(db):
-    """
-    Reads the kill count from the battle and return to be interpreted by jinja
-    """
-    #List of lists with each of the smaller lists containing a player and their kill count
-    killsList=[]
-
-    playerInfo = db.retrievePlayerInfo()
-
-    for playerTup in playerInfo:
-        #Contains player and kill count
-        tempList=[]
-        tempList.append(playerTup[1])
-        tempList.append(playerTup[6])
-
-        #Overall list
-        killsList.append(tempList)
-
-    #Sorts list in descending order based on kill counts
-    killsList.sort(key=lambda x: x[1], reverse=True)
-
-    return killsList
-
-
 
 class Results(object):
-    def __init__(self, db, battleRoyale,roundDescDriver):
+    def __init__(self, db, battleRoyale,roundResultsDriver, roundDescDriver):
         self.db = db
         self.battleRoyale = battleRoyale
 
         self.battleID = battleRoyale.battleID
 
+        self.roundResultsDriver = roundResultsDriver
+
+
         self.roundDescDriver = roundDescDriver
 
-        self.beforeChecksum = self.db.getChecksum("Round")
-
-        self.roundChecksums = []
-
-        self.roundChecksums.append(self.beforeChecksum)
-
-        self.checksumChange = False
 
 
-    def verifyChecksum(self):
-        #checksum = self.db.getChecksum("Round")
+    def advance(self):
 
-        #if self.roundChecksums[-1] != checksum:
-                #self.checksumChange = True
-                #self.roundResultsDriver.get("http://127.0.0.1:8080/roundResults")
-        self.roundDescDriver.get("http://127.0.0.1:8080/roundResults")
-        #else:
-            #self.checksumChange = False
-        #self.roundChecksums.append(checksum)
-        #reload after each get
+        self.roundResultsDriver.get("http://127.0.0.1:8080/roundResults")
+        self.roundDescDriver.get("http://127.0.0.1:8080/roundDescriptions")
+
 
     def showScoreboard(self):
-        self.roundDescDriver.get("http://127.0.0.1:8080/battleResults")
+        self.roundResultsDriver.get("http://127.0.0.1:8080/battleResults")
 
     def showHomePage(self):
-        self.roundDescDriver.get("http://127.0.0.1:8080/index")
+        self.roundResultsDriver.get("http://127.0.0.1:8080/index")
+
+    def showDetails(self):
+        historyDriver = webdriver.Chrome()
+        historyDriver.get("http://127.0.0.1:8080/history")
+
+    def readRoundHistory(self):
+        descList=[]
+        roundList=[]
+        prevRound=1
+
+        historyID = self.retrieveHistoryID(self.battleID)
+
+        #Retrieves round descriptions from the database
+        roundInfo = self.db.retrieveRoundInfo(historyID)
+
+        #Tracks which round is currently being manipulated
+        index=0
+
+        #Iterates through each round in the retrieved info
+        for roundTup in roundInfo:
+            #If is is the last round, the round description is added to the list which is then added to the overall list
+            if roundTup == roundInfo[-1]:
+                roundList.append(roundTup[5])
+                descList.append(roundList)
+                break
+
+            #If the round is different, a new sublist is created for the new round
+            if roundTup[2] != prevRound:
+                descList.append(roundList)
+                roundList=[]
+
+            #Adds the round description to the sublist that is separated by round
+            roundList.append(roundTup[5])
+
+            index=index+1
+
+            #Compares what the round number was for the previous description to see whether the round has advanced
+            prevRound=roundInfo[index-1][2]
+
+        return descList
+
+
+    def readRoundDesc(self):
+        """
+        Reads the round desc from db and adds to a list that can be interpreted by jinja
+        """
+        descList=[]
+        roundList=[]
+        namesList=[]
+        prevRound=1
+
+        #Retrieves round descriptions from the database
+        roundInfo = self.db.retrieveRoundInfo(self.battleID)
+
+        #Tracks which round is currently being manipulated
+        index=0
+
+        #Iterates through each round in the retrieved info
+        for roundTup in roundInfo:
+            #If is is the last round, the round description is added to the list which is then added to the overall list
+            if roundTup == roundInfo[-1]:
+                roundList.append(roundTup)
+                descList.append(roundList)
+                break
+
+            #If the round is different, a new sublist is created for the new round
+            if roundTup[2] != prevRound:
+                descList.append(roundList)
+                roundList=[]
+
+            #Adds the round description to the sublist that is separated by round
+            roundList.append(roundTup)
+
+            index=index+1
+
+            #Compares what the round number was for the previous description to see whether the round has advanced
+            prevRound=roundInfo[index-1][2]
+
+        return descList
+
+    def readRoundResults(self):
+        """
+        Reads the overall results of the round and adds to a list that be interpreted by jinja
+        """
+        #Overall list that contains a list of rounds with each "round list" containing lists that include the killer and the victim
+        killedByList = []
+        #List to separate the results by round
+        roundList=[]
+
+        prevRound=1
+
+        winner=""
+
+        #Retrieves information about who killed who
+        deathInfo = self.db.retrieveKillInfo(self.battleID)
+
+        index=0
+        #Iterates through the the retrieved information which contains killer and victims
+        for deathEventTup in deathInfo:
+            #Contains killer and victim
+            pairList=[]
+
+            #If the round is different, a new sublist is created for the new round
+            if deathEventTup[1] != prevRound:
+                killedByList.append(roundList)
+                roundList=[]
+
+            #If is is the last round, the round description is added to the list which is then added to the overall list
+            if deathEventTup == deathInfo[-1]:
+                pairList.append(deathEventTup[3])
+                pairList.append(deathEventTup[4])
+                roundList.append(pairList)
+                killedByList.append(roundList)
+                break
+
+            #Adds the two names to a list that is added to the round sublist
+            pairList.append(deathEventTup[3])
+            pairList.append(deathEventTup[4])
+            roundList.append(pairList)
+
+            index=index+1
+
+            #Compares what the round number was for the previous description to see whether the round has advanced
+            prevRound=deathInfo[index-1][1]
+
+        #Stores the overall battle winner
+        if len(killedByList)%4 == 0 and len(killedByList) != 0:
+            winner = killedByList[-1][0][0]
+        else:
+            winner =  "None"
+
+
+        return killedByList, winner
+
+    def readBattleResults(self):
+        """
+        Reads the kill count from the battle and return to be interpreted by jinja
+        """
+        #List of lists with each of the smaller lists containing a player and their kill count
+        killsList=[]
+
+        playerInfo = self.db.retrievePlayerInfo()
+
+        for playerTup in playerInfo:
+            #Contains player and kill count
+            tempList=[]
+            tempList.append(playerTup[1])
+            tempList.append(playerTup[6])
+
+            #Overall list
+            killsList.append(tempList)
+
+        #Sorts list in descending order based on kill counts
+        killsList.sort(key=lambda x: x[1], reverse=True)
+
+        return killsList
+
 
 
     @cherrypy.expose
@@ -466,7 +485,7 @@ class Results(object):
 
     @cherrypy.expose
     def battleResults(self):
-        killsList = readBattleResults(self.db)
+        killsList = self.readBattleResults()
 
         template = env.get_template("battleResults.html")
 
@@ -476,21 +495,44 @@ class Results(object):
     @cherrypy.expose
     def roundDescriptions(self):
         #A list containing sublists of rounds which contain sublists of statements where each element is a word
-        descList, namesList = readRoundDesc(self.db,  self.battleID)
+        descList= self.readRoundDesc()
 
         template = env.get_template("roundDesc.html")
 
-        return template.render(descResults = descList, playerNames=namesList, checksumChange=json.dumps(self.checksumChange))
+        counter=0
+
+        battleCounter=1
+
+        #Temp stores current matchup to seperate on the web
+        if len(descList) != 0:
+            playerOne = descList[0][0][3]
+            playerTwo = descList[0][0][4]
+        else:
+            playerOne = "None"
+            playerTwo = "None"
+
+        return template.render(descResults = descList, counter=counter, playerOne = playerOne, playerTwo = playerTwo, battleCounter =  battleCounter)
 
 
     @cherrypy.expose
     def roundResults(self):
-        killedByList, winner = readRoundResults(self.db, self.battleID)
+        killedByList, winner = self.readRoundResults()
 
         template = env.get_template("roundResults.html")
 
-        return template.render(killedByResults = killedByList, winner=winner, checksumChange=json.dumps(self.checksumChange))
+        counter = 0
 
+        battleCounter = 1
+
+        return template.render(killedByResults = killedByList, winner=winner, counter=counter, battleCounter = battleCounter)
+
+    @cherrypy.expose
+    def history(self):
+        history = self.readRoundHistory()
+
+        template = env.get_template("history.html")
+
+        return template.render(history = history)
 
 def main():
     #Creating Database object
@@ -502,26 +544,26 @@ def main():
     #Creating tables for database
     db.createDB()
 
+    #Drivers to help retrieve website
+    roundDescDriver = webdriver.Chrome()
+    roundResultsDriver = webdriver.Chrome()
+
     #Creates overseer object
     battleRoyale = BattleRoyale(db)
 
-    #roundResultsDriver = webdriver.Chrome()
-    roundDescDriver = webdriver.Chrome()
-
+    battleRoyale.createMatch()
 
     #Generates webpage
-    resultsWebpage = Results(db, battleRoyale, roundDescDriver)
+    resultsWebpage = Results(db, battleRoyale, roundResultsDriver, roundDescDriver)
 
     #Creating process that will open the web page; staging the server
-    process = WebProcess(db, battleRoyale, resultsWebpage, roundDescDriver)
+    process = WebProcess(db, battleRoyale, resultsWebpage)
 
     process.start()
 
-    #roundResultsDriver.get("http://127.0.0.1:8080/roundResults")
-    roundDescDriver.get("http://127.0.0.1:8080/index")
 
     #Opens GUI - allows user to input attribute information
-    app=mainMenu.App(db, battleRoyale, resultsWebpage)
+    app=mainMenu.App(db, battleRoyale, resultsWebpage, roundResultsDriver, roundDescDriver)
 
     app.exec_()
 
@@ -529,7 +571,5 @@ def main():
     process.terminate()
 
     app.quit()
-
-
 if(__name__ == "__main__"):
     main()

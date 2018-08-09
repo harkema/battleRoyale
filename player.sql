@@ -12,6 +12,7 @@ CREATE TABLE Player
     PRIMARY KEY (PersonalID)
 );
 
+
 describe Player;
 
 SELECT * FROM Player;
@@ -36,7 +37,13 @@ SELECT * FROM Death;
 
 SELECT * FROM Round;
 
+SELECT * FROM History;
+
 Describe Round;
+
+Describe History;
+
+Drop Table History;
 
 ALTER TABLE Player MODIFY COLUMN Kills INT NOT NULL DEFAULT 0;
 
@@ -45,13 +52,3 @@ ALTER TABLE Death CHANGE RoundID RoundNumber INT;
 CHECKSUM TABLE Player;
 
 Describe Death;
-
-SELECT count(*)
-FROM information_schema.columns
-WHERE table_name = "Round";
-
-SELECT 
-    Player, 
-    TABLE_ROWS 
-FROM 
-    `information_schema`.`tables` ;

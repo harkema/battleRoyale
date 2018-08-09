@@ -131,6 +131,36 @@ table{
   font-weight: bold;
 }
 
+ #battleHeaders {
+   background-color:#3399ff;
+   color:black;
+   width: 100%;
+   text-align: center;
+   font-weight: bold;
+ }
+
+ #battleHeaders2 {
+   background-color:#3399ff;
+   color:black;
+   text-align: right;
+   font-weight: bold;
+ }
+
+ #battleNumber {
+   background-color:#3399ff;
+   color:black;
+   text-align: left;
+   font-weight: bold;
+ }
+
+ #matchHeaders {
+   background-color:#3399ff;
+   color:black;
+   width: 100%;
+   text-align: center;
+   font-weight: bold;
+ }
+
 #tableContent{
   background-color:#4d4dff;
   color: white;

@@ -22,9 +22,9 @@ class Match(object):
 
 
         self.strengthScenarios = [" was hit with a stick by  ", " was pushed down a mountain by ", " was punched in the nose by ", " was kicked in the shins by ", " was strangled by " ]
-        self.dexterityScenarios  = [" fell into a river while following ", " failed to dodge a rock thrown by  ", " fell out of a tree after the branch was broken by  "]
-        self.intelligenceScenarios = [" ate toxic berries left by ", " was set on fire by ", " slept through a surprise attack from "]
-        self.charismaScenarios = [" was beaten up by a new gang led by " , " cried after being yelled at by ", " was stabbed in the back (literally and metaphorically) by ", " was attacked by a wolf who was befriended by "  ]
+        self.dexterityScenarios  = [" fell into a river while running away from  ", " was hit in the face with a rock thrown by  ", " fell out of a tree after it was set on fire by  "]
+        self.intelligenceScenarios = [" ate toxic berries left by ", " was set on fire by ", " was attacked from behind by ", ]
+        self.charismaScenarios = [" was beaten up by a new gang led by " , " cried after being yelled at by ", " was stabbed in the back (literally and metaphorically) by ", " was attacked by a rogue fighter hired by "  ]
 
         self.allScenarios=[]
         self.allScenarios.append(self.strengthScenarios)
@@ -54,6 +54,9 @@ class Match(object):
         self.itemsDict["map"] = "intelligence"
         self.itemsDict["book"] = "intelligence"
         self.itemsDict["glasses"] = "intelligence"
+
+        #Contains events that can decrease a person's health
+        self.events=[" fell into a hole", " was bitten by a snake", " stumbled into the middle of another fight and was punched in the face", " tripped over their own feet", " got completely lost", " was stabbed by a tree branch", " ran into a tree"]
 
 
     def storePlayerInfo(self):
@@ -88,7 +91,7 @@ class Match(object):
 
     def movePlayer(self, player):
         """
-        Moves the player to a new location on the map. Checks for items players can pick up at this new locations
+        Moves the player to a new location on the map. Checks for items players can pick up at this new locations or events that occur
 
         Input: player (int, str, int ...)
         """
@@ -138,6 +141,17 @@ class Match(object):
 
                 print(statement)
 
+        if self.map[playerRow][playerCol] in self.events:
+            statement = ("%s %s" % (player[1], self.map[playerRow][playerCol]))
+            self.roundDesc.append(statement)
+            print(statement)
+
+            self.hitsTakenDict[player[1]]=self.hitsTakenDict[player[1]] + 1
+
+            if self.isDead(player[1]):
+                self.eliminate(player[1])
+                print("HERE")
+
     def addItems(self):
         """
         Randomly generates location for the items to be placed at
@@ -152,6 +166,21 @@ class Match(object):
 
 
             self.map[itemRow][itemCol] = item
+
+    def addEvents(self):
+        """
+        Randomly generates locations for random events to occur that will decrease a user's health
+        """
+        for event in self.events:
+            eventRow=0
+            eventCol=0
+
+            while self.map[eventRow][eventCol] != " ":
+                eventRow = random.randint(0,10)
+                eventCol = random.randint(0,10)
+
+            self.map[eventRow][eventCol] = event
+
 
 
     def battleCycle(self, roundNumber):
@@ -175,6 +204,8 @@ class Match(object):
         self.map = numpy.full((11,11), " ", dtype=object)
 
         self.addItems()
+
+        self.addEvents()
 
         for pair in self.allPairings:
             self.hitsTakenDict[pair[0][1]] = 0
@@ -529,18 +560,26 @@ class Match(object):
         for killed, killer in self.killedByDict.items():
             self.db.addRoundResults(self.battleID, self.roundNumber, killer, killed)
 
-        self.playerOne = ""
-        self.playerTwo=""
 
         for statement in self.roundDesc:
+            self.playerOne = ""
+            self.playerTwo=""
             statementWords = statement.split(" ")
 
             for word in statementWords:
                 if word in self.playerNames:
+                    #Player one has already been added -> add player two
                     if self.playerOne!="":
-                        self.playerTwo=word
+                        #Checks if only one player is preseent
+                        if self.playerOne == self.playerTwo:
+                            self.playerTwo = "None"
+                        else:
+                            self.playerTwo=word
                     else:
                         self.playerOne=word
+            #No player two is present
+            if self.playerTwo == "":
+                self.playerTwo="None"
 
             self.db.addRoundDesc(self.battleID, self.roundNumber, self.playerOne, self.playerTwo, statement)
 

@@ -14,10 +14,27 @@
         <th> Player </th>
         <th> Killed By </th>
       </tr>
+
+      <tr>
+          <td id="battleHeaders2"> Battle </td>
+          <td id="battleNumber"> 1! </td> 
+      </tr>
+
+
       {% for round in killedByResults %}
       <tbody class = "tableBody" id="tableBody">
+
+        {% if counter == 4 %}
+          {% set counter = 0 %}
+          {% set battleCounter = battleCounter+1 %}
+          <tr>
+              <td id="battleHeaders2"> Battle </td>
+              <td id="battleNumber"> {{battleCounter}}! </td>
+          <tr>
+        {% endif %}
+
         <tr>
-          <td id="roundHeaders"> Round {{loop.index}} </td>
+              <td id="roundHeaders"> Round {{loop.index}} </td>
         <tr>
         {% for pair in round %}
         <tr id = "tableContent">
@@ -26,11 +43,12 @@
         </tr>
         {% endfor %}
       </tbody>
+        {% set counter = counter+1 %}
       {% endfor %}
     </table>
-    {% if winner != "None" %}
-      <div id="winner"> Winner: {{winner}} </div>
-    {% endif %}
+      {% if winner != "None" %}
+        <div id="winner"> Winner: {{ winner }} </div>
+      {% endif %}
   </div>
 
   <div class="sideNav">
@@ -39,24 +57,6 @@
     <a href="http://127.0.0.1:8080/battleResults">Kill Counts</a>
     <a href="http://127.0.0.1:8080/roundDescriptions">Play-By-Play Results</a>
   </div>
-
-
-  <!--<script type="text/javascript">
-
-
-    function refresh(checksumChange)
-    {
-        console.log(checksumChange);
-        if(checksumChange == true)
-        {
-          window.location.reload()
-        }
-
-    }
-
-    refresh( {{ checksumChange|safe}} )
-
-  </script> -->
 
 
 </body>
