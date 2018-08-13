@@ -10,7 +10,7 @@
 <body>
   <div class = "content" id="content">
     <h2> Play-By-Play Results </h2>
-    <div id="battleHeaders"> Battle 1! </div>
+    <div id="battleHeaders"> Battle {{letters[battleCounter]}}! </div>
     <br>
 
     {% for round in descResults %}
@@ -18,7 +18,7 @@
       {% if counter == 4 %}
         {% set counter = 0 %}
         {% set battleCounter = battleCounter+1 %}
-        <div id="battleHeaders"> Battle {{battleCounter}}! </div>
+        <div id="battleHeaders"> Battle {{letters[battleCounter]}}! </div>
         <br>
       {% endif %}
 

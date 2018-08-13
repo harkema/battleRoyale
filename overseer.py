@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 import cherrypy
 import os, os.path
@@ -17,7 +17,10 @@ from multiprocessing import cpu_count, Process
 from selenium import webdriver
 
 from jinja2 import Environment, FileSystemLoader
-env = Environment(loader=FileSystemLoader('/home/kiha6349/Dropbox/battleRoyale/templates'))
+path = os.path.join(sys.path[0], "templates")
+env = Environment(loader=FileSystemLoader(path))
+
+import string
 
 
 class WebProcess(Process):
@@ -167,12 +170,14 @@ class Database(object):
         Edits player based on provided attribute and changed value
         """
         if(att == "PlayerName"):
-            editStmt = ("UPDATE Player SET %s = '%s' WHERE PersonalID = %d")
+            editStmt = ("UPDATE Player SET "+att+" = %s WHERE PersonalID = %s")
 
         else:
-            editStmt = ("UPDATE Player SET %s = %d WHERE PersonalID = %d")
+            editStmt = ("UPDATE Player SET "+att+" = %s WHERE PersonalID = %s")
 
-        self.cur.execute(editStmt % (att, changedValue, pid))
+        data = (changedValue, pid)
+
+        self.cur.execute(editStmt, data)
 
     def retrieveSingleRoundInfo(self, battleID, roundNumber):
         """
@@ -208,9 +213,9 @@ class Database(object):
 
         Input: battleID <int>
         """
-        retrieveAllStmt = ("SELECT * FROM Death WHERE BattleID = %d")
+        retrieveAllStmt = ("SELECT * FROM Death WHERE BattleID = %s")
 
-        self.cur.execute(retrieveAllStmt % battleID)
+        self.cur.execute(retrieveAllStmt, (battleID, ) )
 
         self.deathSelect = self.cur.fetchall()
 
@@ -295,14 +300,16 @@ class BattleRoyale(object):
 class Results(object):
     def __init__(self, db, battleRoyale,roundResultsDriver, roundDescDriver):
         self.db = db
+
         self.battleRoyale = battleRoyale
 
         self.battleID = battleRoyale.battleID
 
         self.roundResultsDriver = roundResultsDriver
 
-
         self.roundDescDriver = roundDescDriver
+
+        self.letters = list(string.ascii_uppercase)
 
 
 
@@ -374,6 +381,10 @@ class Results(object):
         #Tracks which round is currently being manipulated
         index=0
 
+        #Letters for keeping track of battles
+        self.letters = list(string.ascii_uppercase)
+
+
         #Iterates through each round in the retrieved info
         for roundTup in roundInfo:
             #If is is the last round, the round description is added to the list which is then added to the overall list
@@ -409,6 +420,8 @@ class Results(object):
         prevRound=1
 
         winner=""
+
+
 
         #Retrieves information about who killed who
         deathInfo = self.db.retrieveKillInfo(self.battleID)
@@ -501,7 +514,7 @@ class Results(object):
 
         counter=0
 
-        battleCounter=1
+        battleCounter=0
 
         #Temp stores current matchup to seperate on the web
         if len(descList) != 0:
@@ -511,7 +524,7 @@ class Results(object):
             playerOne = "None"
             playerTwo = "None"
 
-        return template.render(descResults = descList, counter=counter, playerOne = playerOne, playerTwo = playerTwo, battleCounter =  battleCounter)
+        return template.render(descResults = descList, counter=counter, playerOne = playerOne, playerTwo = playerTwo, battleCounter =  battleCounter, letters=self.letters)
 
 
     @cherrypy.expose
@@ -522,9 +535,10 @@ class Results(object):
 
         counter = 0
 
-        battleCounter = 1
+        battleCounter = 0
 
-        return template.render(killedByResults = killedByList, winner=winner, counter=counter, battleCounter = battleCounter)
+
+        return template.render(killedByResults = killedByList, winner=winner, counter=counter, battleCounter = battleCounter, letters = self.letters)
 
     @cherrypy.expose
     def history(self):
@@ -535,7 +549,8 @@ class Results(object):
         return template.render(history = history)
 
 def main():
-    #Creating Database object
+    print("path", path)
+
     db = Database("127.0.0.1", "root", "NitrotheGreat22!", "playerDB")
 
     #Connecting to database
@@ -550,8 +565,6 @@ def main():
 
     #Creates overseer object
     battleRoyale = BattleRoyale(db)
-
-    battleRoyale.createMatch()
 
     #Generates webpage
     resultsWebpage = Results(db, battleRoyale, roundResultsDriver, roundDescDriver)

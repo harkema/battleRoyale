@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env
 
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -70,9 +70,11 @@ class MainWidget(QWidget):
         #Button that opens quiz window for player to take
         self.newPlayerPushButton = QPushButton("Create a New Player")
         self.buttonLayout.addWidget(self.newPlayerPushButton)
+        self.newPlayerPushButton.clicked.connect(self.showAttributes)
 
         #Starts battle w/ characters that were entered
         self.startPushButton = QPushButton("Start battle!")
+        self.startPushButton.clicked.connect(self.startBattle)
 
         #Shows table of all players currently in db
         self.viewPushButton = QPushButton("View All Players")
@@ -113,6 +115,7 @@ class MainWidget(QWidget):
         self.playerMenu.addAction(self.newPlayerAction)
         self.newPlayerAction.triggered.connect(self.showAttributes)
 
+
         #Delete player option
         self.deletePlayerAction = QAction("Delete...", self.playerMenu)
         self.playerMenu.addAction(self.deletePlayerAction)
@@ -122,6 +125,11 @@ class MainWidget(QWidget):
         self.viewPlayersAction = QAction("View...", self.playerMenu)
         self.playerMenu.addAction(self.viewPlayersAction)
         self.viewPlayersAction.triggered.connect(self.showView)
+
+        #Creating edit players option
+        self.editPlayersAction = QAction("Edit...", self.playerMenu)
+        self.playerMenu.addAction(self.editPlayersAction)
+        self.viewPlayersAction.triggered.connect(self.editPlayer)
 
 
         #Creatings results menu
@@ -137,6 +145,8 @@ class MainWidget(QWidget):
         self.scoreboardAction = QAction("View scoreboard...", self.resultsMenu)
         self.resultsMenu.addAction(self.scoreboardAction)
         self.scoreboardAction.triggered.connect(self.openWebBrowser)
+        self.scoreboardAction.setEnabled(False)
+
 
         #Adding Picture
         self.shieldLabel = QLabel()
@@ -152,8 +162,8 @@ class MainWidget(QWidget):
         self.mainLayout.addWidget(self.shieldLabel)
         self.mainLayout.addWidget(self.startPushButton)
 
-        self.newPlayerPushButton.clicked.connect(self.showAttributes)
-        self.startPushButton.clicked.connect(self.startBattle)
+
+
 
     def showHistory(self):
         """
@@ -212,9 +222,9 @@ class MainWidget(QWidget):
         """
         Opens dialog window that lets user view players before starting battle
         """
-        self.startDialog = StartDialog(self.searchResults, self.db, self.battleRoyale, self.results, self.resultsDriver, self.descDriver)
+        self.startDialog = StartDialog(self.searchResults, self.db, self.battleRoyale, self.results, self.resultsDriver, self.descDriver, self.openResultsPushButton, self.scoreboardAction)
         self.startDialog.exec_()
-        self.openResultsPushButton.setEnabled(True)
+
 
 class ResponseLabel(QLabel):
     def __init__(self, text, layout, row):
@@ -460,6 +470,7 @@ class BattleDialog(QDialog):
 
         self.battleRoyale = battleRoyale
 
+        #Keeps track of what round is being fought
         self.roundNumber = 0
 
         self.resultsWebpage = resultsWebpage
@@ -484,10 +495,12 @@ class BattleDialog(QDialog):
         #Generates matchups using player database
         self.match, self.playersRemaining = self.battleRoyale.createMatch()
 
+        #Button to advance to the next round -> prompts app to read from db
         self.nextRoundPushButton = QPushButton("Next Round")
         self.nextRoundPushButton.clicked.connect(self.nextRound)
         self.mainLayout.addWidget(self.nextRoundPushButton)
 
+        #Shield pic
         self.shieldLabel = QLabel()
         self.shieldLabel.resize(50, 50)
         self.shieldPixmap = QPixmap(path)
@@ -507,14 +520,18 @@ class BattleDialog(QDialog):
         """
         Retrieves information as the database is updated with results from a given round
         """
+        #Each time the button is hit, a new round is created
         self.roundNumber=self.roundNumber+1
 
+        #Players are eliminated until there is one winner
         self.playersRemaining = self.match.battleCycle(self.roundNumber)
+
 
         #DB change prompts webpage to refresh
         self.match.addRoundResultsDB()
         self.resultsWebpage.advance()
 
+        #Winner is reached
         if self.playersRemaining == 1:
             self.match.addBattleResultsDB()
             self.nextRoundPushButton.setEnabled(False)
@@ -528,7 +545,7 @@ class BattleDialog(QDialog):
         self.accept()
 
 class StartDialog(QDialog):
-    def __init__(self, results, db, battleRoyale, resultsWebpage, resultsDriver, descDriver):
+    def __init__(self, results, db, battleRoyale, resultsWebpage, resultsDriver, descDriver, openButton, scoreboardAction):
         """
         Dialog box that shows user players before being able to start battle
         """
@@ -545,11 +562,20 @@ class StartDialog(QDialog):
 
         self.battleRoyale = battleRoyale
 
+        #Instance of the webpage
         self.resultsWebpage = resultsWebpage
 
+        #Display general results
         self.resultsDriver = resultsDriver
 
+        #Displays descriptive results
         self.descDriver = descDriver
+
+        #Button that opens the scoreboard from the main widget
+        self.openButton = openButton
+
+        #Menu action that opsn the same scoreborad as the openButton
+        self.scoreboardAction = scoreboardAction
 
         #Creating Label
         self.questionLabel = QLabel("Start Battle With Following Players?")
@@ -600,10 +626,17 @@ class StartDialog(QDialog):
         """
         Starts match
         """
+        #Retrieves the webpage
         self.resultsDriver.get("http://127.0.0.1:8080/roundResults")
         self.descDriver.get("http://127.0.0.1:8080/roundDescriptions")
+
+        #Dialog window for user to advance the battle
         self.battleDialog = BattleDialog(self.battleRoyale, self.resultsWebpage, self.db, self.resultsDriver, self.descDriver)
         self.battleDialog.exec_()
+        self.openButton.setEnabled(True)
+
+        #Now that page is initialized, scoreboard can be viewed
+        self.scoreboardAction.setEnabled(True)
         self.accept()
 
 class PlayerAttDialog(QDialog):
@@ -711,8 +744,6 @@ class PlayerAttDialog(QDialog):
 
             totalPoints = int(self.strengthLineEdit.text())+int(self.charismaLineEdit.text())+int(self.intelligenceLineEdit.text())+int(self.dexterityLineEdit.text())
 
-            print("Points", totalPoints)
-
             if totalPoints != 20:
                 pointTitle = "Points not allocated correctly"
                 msg = "Error: Total points do not equal 20. Please reallocate points."
@@ -741,8 +772,6 @@ class EditDialog(QDialog):
 
         self.boxList = []
 
-        #Verifies only one checkbox is selected
-        self.firstCheck=False
 
         #Creating message box
         for row in self.results:
@@ -753,20 +782,17 @@ class EditDialog(QDialog):
 
         for self.box in self.boxList:
             self.selectionLayout.addWidget(self.box)
-            self.box.toggled.connect(self.disableBoxes)
+            self.box.toggled.connect(self.showAtt)
+
 
         self.mainLayout.addLayout(self.selectionLayout)
-        self.mainLayout.addWidget(self.editPushButton, alignment=Qt.AlignCenter)
+        #self.mainLayout.addWidget(self.editPushButton, alignment=Qt.AlignCenter)
         self.mainLayout.addWidget(self.closePushButton, alignment=Qt.AlignCenter)
 
         self.closePushButton.clicked.connect(self.closeMe)
         self.editPushButton.clicked.connect(self.showAtt)
         self.editPushButton.clicked.connect(self.closeMe)
 
-    def disableBoxes(self):
-        for self.disableBox in self.boxList:
-            if not self.disableBox.isChecked():
-                self.disableBox.setEnabled(False)
 
     def closeMe(self):
         self.accept()
@@ -778,19 +804,19 @@ class EditDialog(QDialog):
         title="Edit Player?"
         name=""
 
-        for self.box in self.boxList:
-            #Checks that the box is checked and the first check has not already been made
-            if self.box.isChecked():
-                name = self.box.text()
-                self.checkedBox = self.box
+        sender = self.sender()
 
-        msg="Edit " + name + "?"
-        reply=QMessageBox.question(self, title, msg)
+        if sender.isChecked():
+            msg="Edit " + sender.text() + "?"
+            reply=QMessageBox.question(self, title, msg)
 
-        if reply == QMessageBox.Yes:
-            pid = int(self.checkedBox.text().split(" ")[0])
-            self.playerAttDialog = PlayerAttDialog(pid, self.db)
-            self.playerAttDialog.exec_()
+            if reply == QMessageBox.Yes:
+                pid = int(sender.text().split(" ")[0])
+                self.playerAttDialog = PlayerAttDialog(pid, self.db)
+                self.playerAttDialog.exec_()
+
+
+
 
 class DeleteDialog(QDialog):
     def __init__(self, searchResults, db):

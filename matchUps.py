@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import overseer
 import random
 import numpy
@@ -89,11 +88,11 @@ class Match(object):
 
         return len(self.allPlayersList)
 
-    def movePlayer(self, player):
+    def movePlayer(self, player, killer):
         """
         Moves the player to a new location on the map. Checks for items players can pick up at this new locations or events that occur
 
-        Input: player (int, str, int ...)
+        Input: player (int, str, int ...), killer <str>
         """
         playerRow = random.randint(0, 10)
         playerCol = random.randint(0, 10)
@@ -101,7 +100,7 @@ class Match(object):
 
         statement = ("%s ran away" % player[1])
         self.roundDesc.append(statement)
-        print(statement)
+        #print(statement)
 
 
         #Sees if position the player ran to contains an item
@@ -115,7 +114,7 @@ class Match(object):
                 statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
                 self.roundDesc.append(statement)
 
-                print(statement)
+                #print(statement)
 
             elif increased == "charisma":
                 player[3]=player[3]+2
@@ -123,7 +122,7 @@ class Match(object):
                 statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
                 self.roundDesc.append(statement)
 
-                print(statement)
+                #print(statement)
 
             elif increased == "intelligence":
                 player[4]=player[4]+2
@@ -131,7 +130,7 @@ class Match(object):
                 statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
                 self.roundDesc.append(statement)
 
-                print(statement)
+                #print(statement)
 
             else:
                 player[5]=player[5]+2
@@ -139,18 +138,19 @@ class Match(object):
                 statement = ("%s picked up the %s and increased their %s" % (player[1], self.map[playerRow][playerCol], increased))
                 self.roundDesc.append(statement)
 
-                print(statement)
+                #print(statement)
 
+        #Checks if a random event occured that lowered the player's health
         if self.map[playerRow][playerCol] in self.events:
             statement = ("%s %s" % (player[1], self.map[playerRow][playerCol]))
             self.roundDesc.append(statement)
-            print(statement)
+
 
             self.hitsTakenDict[player[1]]=self.hitsTakenDict[player[1]] + 1
 
             if self.isDead(player[1]):
+                self.killedByDict[player[1]] = killer
                 self.eliminate(player[1])
-                print("HERE")
 
     def addItems(self):
         """
@@ -191,6 +191,8 @@ class Match(object):
         #Tracks number of hits each player takes in a given round
         self.hitsTakenDict={}
 
+        self.remainingPlayer = ""
+
         #Creates initital matchups
         self.generateMatchUps()
 
@@ -199,6 +201,12 @@ class Match(object):
 
         #Keeps track of activities that happened during the round
         self.roundDesc = []
+
+
+        if self.remainingPlayer != "":
+            statement = ("%s succesfully hid from the other players.\n" % self.remainingPlayer[1])
+            self.roundDesc.append(statement)
+
 
         #Matrix represented by a 2D List (10 x 10)
         self.map = numpy.full((11,11), " ", dtype=object)
@@ -247,10 +255,10 @@ class Match(object):
                 movementNum = random.randint(1,2)
                 if movementNum == 1:
                     self.movePlayer(pair[0])
-                    print("%s followed %s" % (pair[1][1], pair[0][1]))
+                    #print("%s followed %s" % (pair[1][1], pair[0][1]))
                 else:
                     self.movePlayer(pair[1])
-                    print("%s followed %s" % (pair[1][1], pair[0][1]))
+                    #print("%s followed %s" % (pair[1][1], pair[0][1]))
 
         ##############
         #Strength
@@ -261,7 +269,7 @@ class Match(object):
             #Comparing category attribute points
             if pair[0][2] > pair[1][2]:
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
                 #Increases loser's hits taken
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
@@ -274,20 +282,20 @@ class Match(object):
                 #Continues to assign scenarios until a player has taken 3 hits
                 else:
                     if(self.hitsTakenDict[pair[1][1]] == 2):
-                        self.movePlayer(pair[1])
+                        self.movePlayer(pair[1], pair[0][1])
 
                     self.scenarioGenerator(pair[1])
             #Case in which attribute points are the same between players
             elif pair[0][2] == pair[1][2]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
 
@@ -299,7 +307,7 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[0][1]] == 2):
-                        self.movePlayer(pair[0])
+                        self.movePlayer(pair[0], pair[1][1])
 
                     self.scenarioGenerator(pair)
 
@@ -309,7 +317,7 @@ class Match(object):
         elif self.scenario in self.dexterityScenarios:
             if pair[0][5] > pair[1][5]:
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
 
@@ -321,19 +329,19 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[1][1]] == 2):
-                        self.movePlayer(pair[1])
+                        self.movePlayer(pair[1], pair[0][1])
 
                     self.scenarioGenerator(pair)
 
             elif pair[0][5] == pair[1][5]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
@@ -346,7 +354,7 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[0][1]] == 2):
-                        self.movePlayer(pair[0])
+                        self.movePlayer(pair[0], pair[1][1])
 
                     self.scenarioGenerator(pair)
 
@@ -356,7 +364,7 @@ class Match(object):
         elif self.scenario in self.intelligenceScenarios:
             if pair[0][4] > pair[1][4]:
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
@@ -369,20 +377,20 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[1][1]] == 2):
-                        self.movePlayer(pair[1])
+                        self.movePlayer(pair[1], pair[0][1])
 
                     self.scenarioGenerator(pair)
 
             elif pair[0][4] == pair[1][4]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
@@ -395,7 +403,7 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[0][1]] == 2):
-                        self.movePlayer(pair[0])
+                        self.movePlayer(pair[0], pair[1][1])
 
                     self.scenarioGenerator(pair)
 
@@ -405,7 +413,7 @@ class Match(object):
         elif self.scenario in self.charismaScenarios:
             if pair[0][3] > pair[1][3]:
                 statement = ("%s %s %s" % (pair[1][1], self.scenario, pair[0][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.hitsTakenDict[pair[1][1]]=self.hitsTakenDict[pair[1][1]]+1
@@ -417,20 +425,20 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[1][1]] == 2):
-                        self.movePlayer(pair[1])
+                        self.movePlayer(pair[1], pair[0][1])
 
                     self.scenarioGenerator(pair)
 
             elif pair[0][3] == pair[1][3]:
                 statement = ("%s and %s are in a close battle!" % (pair[0][1], pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.scenarioGenerator(pair)
 
             else:
                 statement = ("%s %s %s" % (pair[0][1], self.scenario, pair[1][1]))
-                print(statement)
+                #print(statement)
                 self.roundDesc.append(statement)
 
                 self.hitsTakenDict[pair[0][1]]=self.hitsTakenDict[pair[0][1]]+1
@@ -442,7 +450,7 @@ class Match(object):
 
                 else:
                     if(self.hitsTakenDict[pair[0][1]] == 2):
-                        self.movePlayer(pair[0])
+                        self.movePlayer(pair[0], pair[1][1])
 
                     self.scenarioGenerator(pair)
 
@@ -454,7 +462,7 @@ class Match(object):
         """
         if self.hitsTakenDict[player] == 3:
             statement = ("%s has been killed\n" % player)
-            print(statement)
+            #print(statement)
             if statement not in self.roundDesc:
                 self.roundDesc.append(statement)
 
@@ -507,50 +515,51 @@ class Match(object):
         self.assignNumsDict = {}
         self.allPairings = []
         self.usedNums = []
+        singleNum = random.randint(0, int(len(self.allPlayersList))-1)
+        odd=False
 
+        #If there is an odd number of players, a random player is given a pass during a round
+        if len(self.allPlayersList)%2 != 0:
+            odd=True
+            self.remainingPlayer = self.allPlayersList[singleNum]
 
-        #if (len(self.allPlayersList)%2 == 0):
         for playerList in self.allPlayersList:
-
-            #If there is an odd number of players, this player stored in the variable automatically proceeds to next round
-            if len(self.usedNums) == int(len(self.allPlayersList)/2):
-                self.remainingPlayer = playerList
-                break
-
-            #Number that is randomly assigned to each player
-            assignNum = random.randint(1, (int(len(self.allPlayersList)/2)))
-
-            #Checks and makes sure the number has not been used more than twice
-            while assignNum in self.usedNums:
+            if playerList != self.remainingPlayer or odd==False:
+                #Number that is randomly assigned to each player
                 assignNum = random.randint(1, (int(len(self.allPlayersList)/2)))
 
-            #Pairing is ready to be made
-            if assignNum in self.assignNumsDict.values():
-                #Get other player name key in dictionary w/ same random num generator
-                #Place in tempList
-                #Add to dictionary
-                tempPairing = []
-                tempPairing.append(playerList)
+                #Checks and makes sure the number has not been used more than twice
+                while assignNum in self.usedNums:
+                    assignNum = random.randint(1, (int(len(self.allPlayersList)/2)))
 
-                #Iterates through dictionary and check which player has the matching number
-                for playerName, number in self.assignNumsDict.items():
-                    if(number == assignNum and playerName != playerList[1]):
-                        #Access the player from the entire players list to get access to attribute information
-                        for smallerPlayerList in self.allPlayersList:
-                            if smallerPlayerList[1] == playerName:
-                                tempPlayerList = smallerPlayerList
-                                #Appends the matching player's information to the temporary pairing list
-                                tempPairing.append(smallerPlayerList)
-                                break
+                #Pairing is ready to be made
+                if assignNum in self.assignNumsDict.values():
+                    #Get other player name key in dictionary w/ same random num generator
+                    #Place in tempList
+                    #Add to dictionary
+                    tempPairing = []
+                    tempPairing.append(playerList)
 
-                #Appends the pair to the pairings array
-                self.allPairings.append(tempPairing)
-                #Keeps track of numbers that have already been assigned
-                self.usedNums.append(assignNum)
+                    #Iterates through dictionary and check which player has the matching number
+                    for playerName, number in self.assignNumsDict.items():
+                        if(number == assignNum and playerName != playerList[1]):
+                            #Access the player from the entire players list to get access to attribute information
+                            for smallerPlayerList in self.allPlayersList:
+                                if smallerPlayerList[1] == playerName:
+                                    tempPlayerList = smallerPlayerList
+                                    #Appends the matching player's information to the temporary pairing list
+                                    tempPairing.append(smallerPlayerList)
+                                    break
 
-            #Add the number to the list of assigned numbers and wait to pair until the number is randomly generated again
-            else:
-                self.assignNumsDict[playerList[1]] = assignNum
+                    #Appends the pair to the pairings array
+                    self.allPairings.append(tempPairing)
+                    #Keeps track of numbers that have already been assigned
+                    self.usedNums.append(assignNum)
+
+                #Add the number to the list of assigned numbers and wait to pair until the number is randomly generated again
+                else:
+                    self.assignNumsDict[playerList[1]] = assignNum
+
 
     def addRoundResultsDB(self):
         """
@@ -559,6 +568,7 @@ class Match(object):
 
         for killed, killer in self.killedByDict.items():
             self.db.addRoundResults(self.battleID, self.roundNumber, killer, killed)
+            #print(killer, " killed ", killed, "\n")
 
 
         for statement in self.roundDesc:

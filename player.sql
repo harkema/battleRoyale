@@ -39,6 +39,8 @@ SELECT * FROM Round;
 
 SELECT * FROM History;
 
+SELECT * FROM Death WHERE BattleID = 111;
+
 Describe Round;
 
 Describe History;
