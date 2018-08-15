@@ -7,6 +7,7 @@ import sys
 import os
 import overseer
 import webbrowser
+import string
 
 class App(QApplication):
     def __init__(self, db, battleRoyale, resultsWebpage, roundResultsDriver, roundDescDriver):
@@ -129,7 +130,7 @@ class MainWidget(QWidget):
         #Creating edit players option
         self.editPlayersAction = QAction("Edit...", self.playerMenu)
         self.playerMenu.addAction(self.editPlayersAction)
-        self.viewPlayersAction.triggered.connect(self.editPlayer)
+        self.editPlayersAction.triggered.connect(self.editPlayer)
 
 
         #Creatings results menu
@@ -137,7 +138,7 @@ class MainWidget(QWidget):
         self.menuBar.addMenu(self.resultsMenu)
 
         #Creating view home option
-        self.homeAction = QAction("View home page...", self.resultsMenu)
+        self.homeAction = QAction("Help...", self.resultsMenu)
         self.resultsMenu.addAction(self.homeAction)
         self.homeAction.triggered.connect(self.openHomePage)
 
@@ -159,7 +160,7 @@ class MainWidget(QWidget):
         self.mainLayout.addStretch(1)
         self.mainLayout.addLayout(self.buttonLayout)
         self.mainLayout.addStretch(1)
-        self.mainLayout.addWidget(self.shieldLabel)
+        self.mainLayout.addWidget(self.shieldLabel, alignment = Qt.AlignCenter)
         self.mainLayout.addWidget(self.startPushButton)
 
 
@@ -361,11 +362,17 @@ class ViewKillHistoryDialog(QDialog):
         self.scrollArea.setWidget(self.scrollWidget)
         self.scrollArea.setWidgetResizable(True)
 
+        self.letters = list(string.ascii_uppercase)
+
 
         self.db = db
         self.historyID = historyID
 
         self.trackRound = 1
+
+        self.infoLabel = QLabel("Click the buttons for more details\nfrom a specific round\n")
+        self.infoLabel.setFont(QFont("Arial", 16))
+        self.killLayout.addWidget(self.infoLabel)
 
         self.closePushButton = QPushButton("Close")
         self.closePushButton.clicked.connect(self.close)
@@ -374,6 +381,14 @@ class ViewKillHistoryDialog(QDialog):
         self.battleKills = self.db.retrieveKillInfo(self.historyID)
 
         self.buttonList = []
+
+        self.battleCount = 0
+
+        self.battleLabel = QLabel("Battle A\n")
+        self.battleLabel.setFont(QFont("Arial", 18))
+
+
+        self.killLayout.addWidget(self.battleLabel, alignment=Qt.AlignCenter)
 
         #Round labels are buttons that can be clicked to provide details about that particular round
         self.roundPushButton = QPushButton("Round " + str(self.trackRound))
@@ -396,7 +411,19 @@ class ViewKillHistoryDialog(QDialog):
                 self.killLayout.addWidget(self.roundPushButton, alignment = Qt.AlignCenter)
 
             self.killLabel = QLabel(row[3] + " killed " + row[4] + "\n")
+            self.winner = row[3]
             self.killLayout.addWidget(self.killLabel)
+
+            if self.trackRound%4 == 0:
+                self.battleCount = self.battleCount+1
+                self.battleLabel = QLabel("Battle " + self.letters[self.battleCount] + "\n")
+                self.battleLabel.setFont(QFont("Arial", 18))
+                self.killLayout.addWidget(self.battleLabel, alignment = Qt.AlignCenter)
+
+        self.winnerLabel = QLabel("\nWinner: " + self.winner)
+        self.winnerLabel.setFont(QFont("Arial", 14))
+        self.killLayout.addWidget(self.winnerLabel, alignment = Qt.AlignCenter)
+
 
 
         #Adding kills to the scroll layout
@@ -485,8 +512,8 @@ class BattleDialog(QDialog):
         path = os.path.join(sys.path[0], "public", "images", "shield.png")
 
 
-        self.welcomeLabel = QLabel("Battle has started! Click on the button below to advance to the next round")
-        self.battleIDLabel = QLabel("Your Battle ID is %s" % battleRoyale.battleID)
+        self.welcomeLabel = QLabel("Battle has started! Click on the button below to advance to the next round.\nResults can be viewed in real time in the two open windows.")
+        self.battleIDLabel = QLabel("\nYour Battle ID is %s" % battleRoyale.battleID)
         self.welcomeLabel.setFont(QFont("Arial", 16))
         self.battleIDLabel.setFont(QFont("Arial", 16))
         self.mainLayout.addWidget(self.welcomeLabel, alignment = Qt.AlignCenter)
@@ -507,7 +534,7 @@ class BattleDialog(QDialog):
         self.shieldPixmap.scaledToHeight(50)
         self.shieldPixmap.scaledToWidth(50)
         self.shieldLabel.setPixmap(self.shieldPixmap)
-        self.mainLayout.addWidget(self.shieldLabel)
+        self.mainLayout.addWidget(self.shieldLabel, alignment=Qt.AlignCenter)
 
 
         self.closePushButton = QPushButton("Close")
@@ -533,6 +560,7 @@ class BattleDialog(QDialog):
 
         #Winner is reached
         if self.playersRemaining == 1:
+            #Adds kill counts to db in order to update the scoreboard
             self.match.addBattleResultsDB()
             self.nextRoundPushButton.setEnabled(False)
 

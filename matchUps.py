@@ -617,6 +617,7 @@ class Match(object):
 
 
 
+
 def main():
     matchUps = Match()
     numberOfPlayers = matchUps.storePlayerInfo()

@@ -549,7 +549,6 @@ class Results(object):
         return template.render(history = history)
 
 def main():
-    print("path", path)
 
     db = Database("127.0.0.1", "root", "NitrotheGreat22!", "playerDB")
 

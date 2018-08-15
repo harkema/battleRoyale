@@ -101,6 +101,7 @@ h2 {
 }
 
 
+
 table{
   width: 100%;
   margin-left: auto;
@@ -129,14 +130,15 @@ table{
   width: 100%;
   text-align: center;
   font-weight: bold;
+
 }
 
  #battleHeaders {
-   background-color:#3399ff;
-   color:black;
    width: 100%;
    text-align: center;
    font-weight: bold;
+   background-color: #000080;
+   color:white;
  }
 
  #battleHeaders2 {
@@ -159,6 +161,8 @@ table{
    width: 100%;
    text-align: center;
    font-weight: bold;
+   text-decoration: underline;
+   text-decoration-style: solid;
  }
 
 #tableContent{

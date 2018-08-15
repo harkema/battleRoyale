@@ -22,21 +22,23 @@
         <br>
       {% endif %}
 
-      <div id="roundHeaders2"> Round {{loop.index}} <br> </div>
-
+      <div id="roundHeaders2"> Round {{loop.index}}</div>
+      <br>
       {% for statementTup in round %}
-
           {% if statementTup[3] == "None" or statementTup[4]== "None" %}
             <div class="statement">
               {{statementTup[5]}}
             </div>
+            {% if loop.index == 1 %}
+                <br>
+            {% endif %}
           {% else %}
-              {% if ((playerOne != statementTup[3] and playerOne != statementTup[4]) and  (playerTwo != statementTup[4] and playerTwo != statementTup[3])) or loop.index == 1%}
-
+              {% if ((playerOne != statementTup[3] and playerOne != statementTup[4]) or  (playerTwo != statementTup[4] and playerTwo != statementTup[3])) or loop.index == 1%}
                   {% set playerOne = statementTup[3] %}
                   {% set playerTwo = statementTup[4] %}
 
-                <div id="matchHeaders"> {{ playerOne }} vs. {{ playerTwo }}  <br> </div>
+                <div id="matchHeaders"> {{ playerOne }} vs. {{ playerTwo }} </div>
+                <br>
 
               {% endif %}
 
@@ -46,11 +48,10 @@
 
           {% endif %}
 
-
       {% endfor %}
 
       {% set counter = counter+1 %}
-
+        <br>
     {% endfor %}
   </div>
 
