@@ -95,7 +95,8 @@ class Database(object):
         self.cur.execute(createStmt)
 
         #Round activites
-        createStmt = "CREATE TABLE IF NOT EXISTS Round (RoundID INT NOT NULL AUTO_INCREMENT,\
+        createStmt = "CREATE TABLE IF NOT EXISTS Round (BattleID INT,\
+                                                        RoundID INT NOT NULL AUTO_INCREMENT,\
                                                        RoundNumber INT not null,\
                                                        PlayerOne VARCHAR(30),\
                                                         PlayerTwo VARCHAR(30),\
@@ -105,7 +106,9 @@ class Database(object):
         self.cur.execute(createStmt)
 
         #Kills completed during the battle
-        createStmt = "CREATE TABLE IF NOT EXISTS Death (KillID INT NOT NULL AUTO_INCREMENT,\
+        createStmt = "CREATE TABLE IF NOT EXISTS Death (BattleID INT,\
+                                                        RoundNumber INT,\
+                                                      KillID INT NOT NULL AUTO_INCREMENT,\
                                                       Killer VARCHAR(30),\
                                                       Victim VARCHAR(30),\
                                                       PRIMARY KEY (KillID))"
@@ -540,13 +543,6 @@ class Results(object):
 
         return template.render(killedByResults = killedByList, winner=winner, counter=counter, battleCounter = battleCounter, letters = self.letters)
 
-    @cherrypy.expose
-    def history(self):
-        history = self.readRoundHistory()
-
-        template = env.get_template("history.html")
-
-        return template.render(history = history)
 
 def main():
 

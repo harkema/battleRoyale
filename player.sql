@@ -54,3 +54,13 @@ ALTER TABLE Death CHANGE RoundID RoundNumber INT;
 CHECKSUM TABLE Player;
 
 Describe Death;
+
+CREATE USER 'testUser'@'127.0.0.1' IDENTIFIED BY 'password';
+
+ALTER USER 'testUser@127.0.0.1' IDENTIFIED BY 'password' ;
+
+DROP USER 'testUser'@'127.0.0.1';
+
+GRANT ALL PRIVILEGES ON *.* TO 'testUser'@'127.0.0.1';
+
+FLUSH privileges;
