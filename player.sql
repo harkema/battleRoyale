@@ -37,8 +37,6 @@ SELECT * FROM Death;
 
 SELECT * FROM Round;
 
-SELECT * FROM History;
-
 SELECT * FROM Death WHERE BattleID = 111;
 
 Describe Round;
@@ -64,3 +62,5 @@ DROP USER 'testUser'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON *.* TO 'testUser'@'127.0.0.1';
 
 FLUSH privileges;
+
+SELECT * FROM Round WHERE BattleID = 25;

@@ -325,6 +325,7 @@ class ViewKillDetailsDialog(QDialog):
         self.detailsLayout.addWidget(self.moreInfoLabel, alignment=Qt.AlignCenter)
 
         self.history = self.db.retrieveSingleRoundInfo(historyID, int(roundNumber))
+        print("History", self.history)
 
         for event in self.history:
             self.eventLabel = QLabel(event[0])
@@ -339,7 +340,6 @@ class ViewKillDetailsDialog(QDialog):
         self.scrollLayout.addLayout(self.detailsLayout)
         self.mainLayout.addWidget(self.scrollArea)
 
-        self.mainLayout.addLayout(self.detailsLayout)
         self.mainLayout.addWidget(self.closePushButton)
 
     def close(self):
@@ -414,7 +414,7 @@ class ViewKillHistoryDialog(QDialog):
             self.winner = row[3]
             self.killLayout.addWidget(self.killLabel)
 
-            if self.trackRound%4 == 0:
+            if self.trackRound%4 == 0 and row != self.battleKills[-1]:
                 self.battleCount = self.battleCount+1
                 self.battleLabel = QLabel("Battle " + self.letters[self.battleCount] + "\n")
                 self.battleLabel.setFont(QFont("Arial", 18))
@@ -504,9 +504,6 @@ class BattleDialog(QDialog):
 
         self.battleRoyale = battleRoyale
 
-        #Keeps track of what round is being fought
-        self.roundNumber = 0
-
         self.resultsWebpage = resultsWebpage
 
         self.resultsDriver = resultsDriver
@@ -555,10 +552,10 @@ class BattleDialog(QDialog):
         Retrieves information as the database is updated with results from a given round
         """
         #Each time the button is hit, a new round is created
-        self.roundNumber=self.roundNumber+1
+        self.battleRoyale.roundCounter=self.battleRoyale.roundCounter+1
 
         #Players are eliminated until there is one winner
-        self.playersRemaining = self.match.battleCycle(self.roundNumber)
+        self.playersRemaining = self.match.battleCycle(self.battleRoyale.roundCounter)
 
 
         #DB change prompts webpage to refresh

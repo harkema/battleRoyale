@@ -565,10 +565,11 @@ class Match(object):
         """
         Adds results of each round to database that is immediately sent to the webpage for viewing
         """
+        print("number",self.roundNumber)
 
         for killed, killer in self.killedByDict.items():
             self.db.addRoundResults(self.battleID, self.roundNumber, killer, killed)
-            #print(killer, " killed ", killed, "\n")
+
 
 
         for statement in self.roundDesc:

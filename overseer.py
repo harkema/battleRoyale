@@ -307,6 +307,8 @@ class BattleRoyale(object):
         #Generates battleID
         self.battleID = 0
 
+        self.roundCounter = 0
+
         #Generates battleID until it is unique
         if self.db.checkBattleID(self.battleID) != 0:
             while self.db.checkBattleID(self.battleID) != 0:
