@@ -115,6 +115,30 @@ class Database(object):
 
         self.cur.execute(createStmt)
 
+        countStmt = "SELECT COUNT(*) FROM Player"
+
+        self.cur.execute(countStmt)
+
+        numberOfPlayers = self.cur.fetchone()
+
+        if numberOfPlayers[0] <= 4:
+            popStmt = ("INSERT INTO Player (PlayerName, Strength, Charisma, Intelligence, Dexterity)" "Values(%s, %s, %s, %s, %s)")
+
+            playerOne = ("Grace", 4, 3, 1, 12)
+
+            self.cur.execute(popStmt, playerOne)
+
+            playerTwo = ("Kelsey", 7,8,5,0)
+
+            self.cur.execute(popStmt, playerTwo)
+
+            playerThree = ("Nicki", 4, 6, 8, 2)
+
+            self.cur.execute(popStmt, playerThree)
+
+            playerFour = ("John", 3, 2, 3, 12)
+
+            self.cur.execute(popStmt, playerFour)
 
 
     def checkBattleID(self, battleID):
@@ -378,6 +402,8 @@ class Results(object):
         namesList=[]
         prevRound=1
 
+        winner=""
+
         #Retrieves round descriptions from the database
         roundInfo = self.db.retrieveRoundInfo(self.battleID)
 
@@ -390,10 +416,11 @@ class Results(object):
 
         #Iterates through each round in the retrieved info
         for roundTup in roundInfo:
-            #If is is the last round, the round description is added to the list which is then added to the overall list
+            #If is is the last action in the round, the round description is added to the list which is then added to the overall list
             if roundTup == roundInfo[-1]:
                 roundList.append(roundTup)
                 descList.append(roundList)
+
                 break
 
             #If the round is different, a new sublist is created for the new round
@@ -409,7 +436,31 @@ class Results(object):
             #Compares what the round number was for the previous description to see whether the round has advanced
             prevRound=roundInfo[index-1][2]
 
-        return descList
+        if len(descList)%4 == 0 and len(descList) != 0:
+            for eventTup in roundList:
+                if eventTup[3] != "None" and eventTup[4] != "None":
+                    playerOne = eventTup[3]
+                    playerTwo = eventTup[4]
+                    break
+
+            killStmt = roundTup[-1]
+            print("killStmt", killStmt)
+
+            killStmtList = killStmt.split(" ")
+            killed = killStmtList[0]
+
+            if killed == playerOne:
+                winner = playerTwo
+            else:
+                winner = playerOne
+        else:
+            winner="None"
+
+
+
+
+
+        return descList, winner
 
     def readRoundResults(self):
         """
@@ -511,7 +562,7 @@ class Results(object):
     @cherrypy.expose
     def roundDescriptions(self):
         #A list containing sublists of rounds which contain sublists of statements where each element is a word
-        descList= self.readRoundDesc()
+        descList, winner= self.readRoundDesc()
 
         template = env.get_template("roundDesc.html")
 
@@ -527,7 +578,7 @@ class Results(object):
             playerOne = "None"
             playerTwo = "None"
 
-        return template.render(descResults = descList, counter=counter, playerOne = playerOne, playerTwo = playerTwo, battleCounter =  battleCounter, letters=self.letters)
+        return template.render(descResults = descList, counter=counter, playerOne = playerOne, playerTwo = playerTwo, battleCounter =  battleCounter, letters=self.letters, winner=winner)
 
 
     @cherrypy.expose

@@ -53,6 +53,11 @@
       {% set counter = counter+1 %}
         <br>
     {% endfor %}
+
+    {% if winner != "None" %}
+      <div id="winner"> Winner: {{ winner }} </div>
+    {% endif %}
+    
   </div>
 
 

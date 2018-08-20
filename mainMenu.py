@@ -475,17 +475,24 @@ class HistoryDialog(QDialog):
         self.accept()
 
     def seeHistory(self):
-        self.historyID = int(self.battleIDLineEdit.text())
+        try:
+            self.historyID = int(self.battleIDLineEdit.text())
 
-        if self.db.checkBattleID(self.historyID):
-            self.viewKillHistoryDialog  =  ViewKillHistoryDialog(self.db, self.historyID)
-            self.viewKillHistoryDialog.exec_()
+            if self.db.checkBattleID(self.historyID):
+                self.viewKillHistoryDialog  =  ViewKillHistoryDialog(self.db, self.historyID)
+                self.viewKillHistoryDialog.exec_()
 
-        else:
-            title="Error: Battle ID Doesn't Exist"
-            msg="Please Enter a Valid Battle ID and Try Again"
+            elif not self.db.checkBattleID(self.historyID):
+                title="Error: Battle ID Doesn't Exist"
+                msg="Please Enter a Valid Battle ID and Try Again"
 
-            QMessageBox.information(self, title, msg)
+                QMessageBox.information(self, title, msg)
+
+        except:
+            errorTitle = "Error: Invalid Input"
+            errorMsg = "Please Enter a Valid Battle ID and Try Again"
+
+            QMessageBox.information(self, errorTitle, errorMsg)
 
 class BattleDialog(QDialog):
     def __init__(self, battleRoyale, resultsWebpage, db, resultsDriver, descDriver):
