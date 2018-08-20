@@ -565,7 +565,6 @@ class Match(object):
         """
         Adds results of each round to database that is immediately sent to the webpage for viewing
         """
-        print("number",self.roundNumber)
 
         for killed, killer in self.killedByDict.items():
             self.db.addRoundResults(self.battleID, self.roundNumber, killer, killed)
@@ -611,6 +610,10 @@ class Match(object):
                     playerID = playerTup[0]
                     oldKillNumber = playerTup[6]
                     break
+
+            if oldKillNumber == None:
+                oldKillNumber = 0
+
             totalKills = oldKillNumber+kills
             self.db.addKills(playerID, totalKills)
 

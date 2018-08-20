@@ -325,7 +325,6 @@ class ViewKillDetailsDialog(QDialog):
         self.detailsLayout.addWidget(self.moreInfoLabel, alignment=Qt.AlignCenter)
 
         self.history = self.db.retrieveSingleRoundInfo(historyID, int(roundNumber))
-        print("History", self.history)
 
         for event in self.history:
             self.eventLabel = QLabel(event[0])
@@ -363,6 +362,8 @@ class ViewKillHistoryDialog(QDialog):
         self.scrollArea.setWidgetResizable(True)
 
         self.letters = list(string.ascii_uppercase)
+
+        self.winner = ""
 
 
         self.db = db
@@ -411,8 +412,13 @@ class ViewKillHistoryDialog(QDialog):
                 self.killLayout.addWidget(self.roundPushButton, alignment = Qt.AlignCenter)
 
             self.killLabel = QLabel(row[3] + " killed " + row[4] + "\n")
-            self.winner = row[3]
             self.killLayout.addWidget(self.killLabel)
+
+            if self.trackRound%4 == 0:
+                self.winner = row[3]
+                self.winnerLabel = QLabel("Winner: " + self.winner + "\n")
+                self.winnerLabel.setFont(QFont("Arial", 14))
+                self.killLayout.addWidget(self.winnerLabel, alignment = Qt.AlignCenter)
 
             if self.trackRound%4 == 0 and row != self.battleKills[-1]:
                 self.battleCount = self.battleCount+1
@@ -420,9 +426,6 @@ class ViewKillHistoryDialog(QDialog):
                 self.battleLabel.setFont(QFont("Arial", 18))
                 self.killLayout.addWidget(self.battleLabel, alignment = Qt.AlignCenter)
 
-        self.winnerLabel = QLabel("\nWinner: " + self.winner)
-        self.winnerLabel.setFont(QFont("Arial", 14))
-        self.killLayout.addWidget(self.winnerLabel, alignment = Qt.AlignCenter)
 
 
 
@@ -475,25 +478,25 @@ class HistoryDialog(QDialog):
         self.accept()
 
     def seeHistory(self):
-        try:
-            self.historyID = int(self.battleIDLineEdit.text())
+        #try:
+        self.historyID = int(self.battleIDLineEdit.text())
 
-            if self.db.checkBattleID(self.historyID):
-                self.viewKillHistoryDialog  =  ViewKillHistoryDialog(self.db, self.historyID)
-                self.viewKillHistoryDialog.exec_()
+        if self.db.checkBattleID(self.historyID):
+            self.viewKillHistoryDialog  =  ViewKillHistoryDialog(self.db, self.historyID)
+            self.viewKillHistoryDialog.exec_()
 
-            elif not self.db.checkBattleID(self.historyID):
-                title="Error: Battle ID Doesn't Exist"
-                msg="Please Enter a Valid Battle ID and Try Again"
+        elif not self.db.checkBattleID(self.historyID):
+            title="Error: Battle ID Doesn't Exist"
+            msg="Please Enter a Valid Battle ID and Try Again"
 
-                QMessageBox.information(self, title, msg)
-
+            QMessageBox.information(self, title, msg)
+        """
         except:
             errorTitle = "Error: Invalid Input"
             errorMsg = "Please Enter a Valid Battle ID and Try Again"
 
             QMessageBox.information(self, errorTitle, errorMsg)
-
+        """
 class BattleDialog(QDialog):
     def __init__(self, battleRoyale, resultsWebpage, db, resultsDriver, descDriver):
         """

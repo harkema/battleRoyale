@@ -121,7 +121,7 @@ class Database(object):
 
         numberOfPlayers = self.cur.fetchone()
 
-        if numberOfPlayers[0] <= 4:
+        if numberOfPlayers[0] < 9:
             popStmt = ("INSERT INTO Player (PlayerName, Strength, Charisma, Intelligence, Dexterity)" "Values(%s, %s, %s, %s, %s)")
 
             playerOne = ("Grace", 4, 3, 1, 12)
@@ -139,6 +139,24 @@ class Database(object):
             playerFour = ("John", 3, 2, 3, 12)
 
             self.cur.execute(popStmt, playerFour)
+
+            playerFive = ("Dominic", 8, 10 , 1, 1)
+
+            self.cur.execute(popStmt, playerFive)
+
+            playerSix = ("Bryce", 6, 9, 1, 4)
+
+            self.cur.execute(popStmt, playerSix)
+
+            playerSeven = ("Matt", 1,3,4,12)
+
+            self.cur.execute(popStmt, playerSeven)
+
+            playerEight = ("Maria", 2,7,5,6)
+
+            self.cur.execute(popStmt, playerEight)
+
+            playerNine = ("Jordan", 5,2,5,8)
 
 
     def checkBattleID(self, battleID):
@@ -446,7 +464,6 @@ class Results(object):
                     break
 
             killStmt = roundTup[-1]
-            print("killStmt", killStmt)
 
             killStmtList = killStmt.split(" ")
             killed = killStmtList[0]

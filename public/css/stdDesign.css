@@ -88,6 +88,9 @@ h2 {
 #winner {
   text-align: center;
   width: 98%;
+  color:black;
+  font-weight: bold;
+
 }
 
 .bracket{
