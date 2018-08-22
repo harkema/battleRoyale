@@ -745,37 +745,45 @@ class PlayerAttDialog(QDialog):
 
         reply=QMessageBox.question(self, title, msg)
 
+        attList=[]
+        changedValueList=[]
+
         if reply == QMessageBox.Yes:
 
             if self.nameLineEdit.isModified():
                 changedValue = self.nameLineEdit.text()
                 att = "PlayerName"
 
-                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+                attList.append(att)
+                changedValueList.append(changedValue)
 
             if self.strengthLineEdit.isModified():
                 changedValue =int(self.strengthLineEdit.text())
                 att = "Strength"
 
-                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+                attList.append(att)
+                changedValueList.append(changedValue)
 
             if self.charismaLineEdit.isModified():
                 changedValue = int(self.charismaLineEdit.text())
                 att = "Charisma"
 
-                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+                attList.append(att)
+                changedValueList.append(changedValue)
 
             if self.intelligenceLineEdit.isModified():
                 changedValue = int(self.intelligenceLineEdit.text())
                 att= "Intelligence"
 
-                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+                attList.append(att)
+                changedValueList.append(changedValue)
 
             if self.dexterityLineEdit.isModified():
                 changedValue = int(self.dexterityLineEdit.text())
                 att= "Dexterity"
 
-                self.db.editPlayer(att, changedValue, self.selectedPlayerPID)
+                attList.append(att)
+                changedValueList.append(changedValue)
 
             totalPoints = int(self.strengthLineEdit.text())+int(self.charismaLineEdit.text())+int(self.intelligenceLineEdit.text())+int(self.dexterityLineEdit.text())
 
@@ -784,6 +792,13 @@ class PlayerAttDialog(QDialog):
                 msg = "Error: Total points do not equal 20. Please reallocate points."
 
                 QMessageBox.information(self, pointTitle, msg)
+            else:
+                for index in range(len(attList)):
+                    self.db.editPlayer(attList[index], changedValueList[index], self.selectedPlayerPID)
+
+
+
+
 
 class EditDialog(QDialog):
     def __init__(self, searchResults, db):
