@@ -121,7 +121,7 @@ class Database(object):
 
         numberOfPlayers = self.cur.fetchone()
 
-        if numberOfPlayers[0] < 9:
+        if numberOfPlayers[0] < 8:
             popStmt = ("INSERT INTO Player (PlayerName, Strength, Charisma, Intelligence, Dexterity)" "Values(%s, %s, %s, %s, %s)")
 
             playerOne = ("Grace", 4, 3, 1, 12)

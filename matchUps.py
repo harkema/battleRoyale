@@ -251,13 +251,14 @@ class Match(object):
 
         #Check if both players have same attribute distribution - move players until one picks up an item
         if(pair[0][2] == pair[1][2] and pair[0][3] == pair[1][3] and pair[0][4] == pair[1][4] and pair[0][5] == pair[1][5]):
+
             while (pair[0][2] == pair[1][2] and pair[0][3] == pair[1][3] and pair[0][4] == pair[1][4] and pair[0][5] == pair[1][5]):
                 movementNum = random.randint(1,2)
                 if movementNum == 1:
-                    self.movePlayer(pair[0])
+                    self.movePlayer(pair[0], pair[1][1])
                     #print("%s followed %s" % (pair[1][1], pair[0][1]))
                 else:
-                    self.movePlayer(pair[1])
+                    self.movePlayer(pair[1], pair[0][1])
                     #print("%s followed %s" % (pair[1][1], pair[0][1]))
 
         ##############
